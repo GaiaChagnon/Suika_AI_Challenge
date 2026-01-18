@@ -1,0 +1,21 @@
+{
+    "version": "1.0",
+    "description": "Fixed seeds for competition evaluation",
+    "seeds": [
+        42, 123, 456, 789, 1024,
+        2048, 3141, 4096, 5555, 6789,
+        7777, 8192, 9001, 10000, 11111,
+        12345, 13579, 14142, 15000, 16384,
+        17171, 18181, 19191, 20202, 21212,
+        22222, 23456, 24680, 25000, 26262,
+        27272, 28282, 29292, 30303, 31415,
+        32768, 33333, 34567, 35353, 36363,
+        37373, 38383, 39393, 40404, 41414,
+        42424, 43434, 44444, 45454, 46464
+    ],
+    "notes": [
+        "Evaluation runs agent on all seeds",
+        "Final score = mean(final_scores)",
+        "Seeds chosen to provide variety while being reproducible"
+    ]
+}

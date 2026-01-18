@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "suika-competition"
+version = "0.1.0"
+description = "Suika-style fruit-merging game as an AI competition environment"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Competition Organizers"}
+]
+keywords = ["suika", "game", "reinforcement-learning", "gymnasium", "pymunk"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "pymunk>=6.6.0",
+    "gymnasium>=0.29.0",
+    "numpy>=1.24.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+render = ["pygame>=2.5.0"]
+dev = ["pytest>=7.0.0", "pytest-cov>=4.0.0"]
+all = ["suika-competition[render,dev]"]
+
+[project.scripts]
+suika-play = "tools.play_human:main"
+suika-view = "tools.view_grid:main"
+suika-eval = "DO_NOT_MODIFY.evaluation.run_eval:main"
+suika-bench = "tools.benchmark_speed:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["DO_NOT_MODIFY*", "contestants*", "tools*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
