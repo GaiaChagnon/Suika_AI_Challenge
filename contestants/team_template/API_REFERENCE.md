@@ -484,6 +484,8 @@ Example 3: Tower (medium efficiency ~0.60)
 - **Low efficiency (< 0.6):** Lots of gaps, fruits can shift and cause chain reactions
 - Helps detect "loose" stacks that might collapse unpredictably
 
+However, this is not a perfect metric. For example, a stack of 2 cherries, 2 strawberries and 2 grapes can have a packing efficiency of 1.0, but if you have a melon and other big fruits, the packing efficiency can be lower even if the agent is performing well.
+
 **`surface_roughness`:**
 - Standard deviation of the Y positions of "surface" fruits
 - 0.0 = perfectly flat top

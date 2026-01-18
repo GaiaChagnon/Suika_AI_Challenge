@@ -165,10 +165,10 @@ class SuikaRenderer:
         title = self._font_medium.render("FRUITS", True, self._text_dark)
         screen.blit(title, (panel_x + (self._panel_width - title.get_width()) // 2, 15))
         
-        # Draw evolution chain
+        # Draw evolution chain (including skull as final form)
         fruit_names = [
             "cherry", "strawberry", "grape", "dekopon", "persimmon",
-            "apple", "pear", "peach", "pineapple", "honeydew", "melon"
+            "apple", "pear", "peach", "pineapple", "banana", "watermelon", "skull"
         ]
         
         # Uniform icon size for clean look
@@ -295,7 +295,7 @@ class SuikaRenderer:
         """Draw all fruits with sprites or fallback."""
         fruit_names = [
             "cherry", "strawberry", "grape", "dekopon", "persimmon",
-            "apple", "pear", "peach", "pineapple", "honeydew", "melon"
+            "apple", "pear", "peach", "pineapple", "banana", "watermelon", "skull"
         ]
         
         # Sort by Y for proper layering
@@ -394,6 +394,14 @@ class SuikaRenderer:
         score_value = self._font_huge.render(f"{render_data['score']:,}", True, self._text_dark)
         screen.blit(score_value, (20, 38))
         
+        # Skull multiplier (if any skulls present)
+        skull_count = render_data.get("skull_count", 0)
+        if skull_count > 0:
+            multiplier = render_data.get("skull_multiplier", 1.0)
+            mult_text = f"x{multiplier:.1f} ({skull_count}💀)"
+            mult_surface = self._font_small.render(mult_text, True, (100, 50, 150))
+            screen.blit(mult_surface, (20, 78))
+        
         # Next fruit box
         next_x = self._game_area_width - 110
         pygame.draw.rect(screen, self._box_fill, (next_x - 10, 10, 100, 65), border_radius=8)
@@ -407,7 +415,7 @@ class SuikaRenderer:
         if next_id < len(self._config.fruits):
             fruit_names = [
                 "cherry", "strawberry", "grape", "dekopon", "persimmon",
-                "apple", "pear", "peach", "pineapple", "honeydew", "melon"
+                "apple", "pear", "peach", "pineapple", "banana", "watermelon", "skull"
             ]
             name = fruit_names[next_id] if next_id < len(fruit_names) else ""
             
@@ -715,8 +723,8 @@ class HumanPlayer:
 def main():
     parser = argparse.ArgumentParser(description="Play Suika game interactively")
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
-    parser.add_argument("--width", type=int, default=700, help="Window width")
-    parser.add_argument("--height", type=int, default=800, help="Window height")
+    parser.add_argument("--width", type=int, default=600, help="Window width (default: 600)")
+    parser.add_argument("--height", type=int, default=700, help="Window height (default: 700)")
     parser.add_argument("--fps", type=int, default=60, help="Target FPS")
     
     args = parser.parse_args()

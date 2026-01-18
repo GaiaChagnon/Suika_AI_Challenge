@@ -68,6 +68,11 @@ class FruitType:
         return self.config.color_full
     
     @property
+    def is_final(self) -> bool:
+        """True if this fruit cannot merge (e.g., skull)."""
+        return self.config.is_final
+    
+    @property
     def is_composite(self) -> bool:
         """True if this fruit has multiple collision circles."""
         return len(self.collision_circles) > 1
@@ -149,13 +154,33 @@ class FruitCatalog:
     
     @property
     def melon(self) -> FruitType:
-        """The largest fruit type (melon)."""
-        return self._types[-1]
+        """The melon fruit type (ID 9)."""
+        return self._types[9] if len(self._types) > 9 else self._types[-1]
     
     @property
     def melon_id(self) -> int:
-        """ID of the melon type."""
-        return self._types[-1].id
+        """ID of the melon type (9)."""
+        return 9
+    
+    @property
+    def watermelon(self) -> FruitType:
+        """The watermelon fruit type (ID 10, largest mergeable)."""
+        return self._types[10] if len(self._types) > 10 else self._types[-1]
+    
+    @property
+    def watermelon_id(self) -> int:
+        """ID of the watermelon type (10)."""
+        return 10
+    
+    @property
+    def skull(self) -> Optional[FruitType]:
+        """The skull fruit type (ID 11, final form)."""
+        return self._types[11] if len(self._types) > 11 else None
+    
+    @property
+    def skull_id(self) -> int:
+        """ID of the skull type (11)."""
+        return 11
     
     def get_next_type(self, fruit_id: int) -> Optional[FruitType]:
         """
@@ -165,8 +190,11 @@ class FruitCatalog:
             fruit_id: ID of fruits being merged.
             
         Returns:
-            Next fruit type, or None if merging melons.
+            Next fruit type, or None if this fruit cannot merge.
         """
+        # Final fruits (like skull) cannot merge
+        if self._types[fruit_id].is_final:
+            return None
         next_id = fruit_id + 1
         if next_id >= len(self._types):
             return None
@@ -175,6 +203,20 @@ class FruitCatalog:
     def is_melon(self, fruit_id: int) -> bool:
         """Check if a fruit ID is the melon type."""
         return fruit_id == self.melon_id
+    
+    def is_watermelon(self, fruit_id: int) -> bool:
+        """Check if a fruit ID is the watermelon type."""
+        return fruit_id == self.watermelon_id
+    
+    def is_skull(self, fruit_id: int) -> bool:
+        """Check if a fruit ID is the skull type."""
+        return fruit_id == self.skull_id
+    
+    def is_final_fruit(self, fruit_id: int) -> bool:
+        """Check if a fruit cannot merge (e.g., skull)."""
+        if 0 <= fruit_id < len(self._types):
+            return self._types[fruit_id].is_final
+        return False
     
     def is_spawnable(self, fruit_id: int) -> bool:
         """Check if a fruit ID is in the spawnable set."""

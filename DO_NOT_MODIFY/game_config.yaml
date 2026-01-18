@@ -9,19 +9,20 @@
 # Board Configuration
 # -----------------------------------------------------------------------------
 board:
-  # Arena sized to match original Suika Game
-  # Two watermelons (189px radius = 378px diameter) can barely fit side-by-side
-  # Arena can hold ~350 cherries when perfectly packed (physics limits to much less)
-  width: 800               # Fits 2 watermelons (378×2=756) with small margin
-  height: 1000             # Narrow and tall like original Suika
+  # Arena: 400 x 500 (4:5 aspect ratio)
+  # Watermelon = 230px diameter (57.5% of width)
+  # Two watermelons CAN fit diagonally with 90px margin
+  # Two watermelons CANNOT fit side-by-side (460 > 400)
+  width: 400               # Arena width
+  height: 500              # Arena height
   
   # Lose line: fruits above this for >1s = game over
-  lose_line_y: 900         # Y coordinate of lose line (90% up)
+  lose_line_y: 475         # 95% of arena height
   lose_line_grace_time: 1.0  # Seconds before game over triggers
   
   # Spawn position
-  spawn_y: 950             # Y coordinate where fruits spawn
-  spawn_margin: 5          # Extra margin from walls (pixels)
+  spawn_y: 485             # Y coordinate where fruits spawn
+  spawn_margin: 3          # Extra margin from walls (pixels)
 
 # -----------------------------------------------------------------------------
 # Physics Configuration
@@ -60,161 +61,184 @@ physics:
 #   Apple:21, Pear:28, Peach:36, Pineapple:45, Melon:55, Watermelon:66
 # -----------------------------------------------------------------------------
 fruits:
-  # ---- Level 0: Cherry ----
+  # ==========================================================================
+  # Fruit sizes based on user specifications
+  # Arena: 400 x 500, Watermelon = 230px diameter (57.5% of width)
+  # Two watermelons fit diagonally with 90px margin
+  # ==========================================================================
+  
+  # ---- Level 0: Cherry (28px diameter) ----
   - id: 0
     name: cherry
-    mass: 0.5
-    visual_radius: 15
+    mass: 1.0
+    visual_radius: 14
     collision_circles:
-      - [15, 0, 0]        # Original Suika size
+      - [14, 0, 0]
     merge_score: 1
     friction: 0.3
     elasticity: 0.5
     color_solid: [220, 20, 60]
     color_full: [220, 20, 60]
 
-  # ---- Level 1: Strawberry ----
+  # ---- Level 1: Strawberry (38px diameter) ----
   - id: 1
     name: strawberry
-    mass: 1.0
-    visual_radius: 21
+    mass: 2.0
+    visual_radius: 19
     collision_circles:
-      - [21, 0, 0]        # Original Suika size
+      - [19, 0, 0]
     merge_score: 3
     friction: 0.3
     elasticity: 0.5
     color_solid: [255, 99, 71]
     color_full: [255, 99, 71]
 
-  # ---- Level 2: Grape (composite for cluster shape) ----
+  # ---- Level 2: Grape (58px diameter) ----
   - id: 2
     name: grape
-    mass: 2.5
-    visual_radius: 31
+    mass: 4.0
+    visual_radius: 29
     collision_circles:
-      - [16, 0, 7]        # Top center
-      - [14, -9, -5]      # Bottom left
-      - [14, 9, -5]       # Bottom right
+      - [16, 0, 6]        # Top center
+      - [14, -10, -5]     # Bottom left
+      - [14, 10, -5]      # Bottom right
     merge_score: 6
     friction: 0.35
     elasticity: 0.45
     color_solid: [128, 0, 128]
     color_full: [138, 43, 226]
 
-  # ---- Level 3: Dekopon (Mandarin) ----
+  # ---- Level 3: Dekopon (67px diameter) ----
   - id: 3
     name: dekopon
-    mass: 4.5
-    visual_radius: 39
+    mass: 6.0
+    visual_radius: 34
     collision_circles:
-      - [39, 0, 0]        # Original Suika size
+      - [34, 0, 0]
     merge_score: 10
     friction: 0.3
     elasticity: 0.45
     color_solid: [255, 165, 0]
     color_full: [255, 140, 0]
 
-  # ---- Level 4: Persimmon ----
+  # ---- Level 4: Persimmon (77px diameter) ----
   - id: 4
     name: persimmon
-    mass: 8.0
-    visual_radius: 49
+    mass: 10.0
+    visual_radius: 39
     collision_circles:
-      - [49, 0, 0]        # Original Suika size
+      - [39, 0, 0]
     merge_score: 15
     friction: 0.3
     elasticity: 0.4
     color_solid: [255, 127, 80]
     color_full: [255, 99, 71]
 
-  # ---- Level 5: Apple ----
+  # ---- Level 5: Apple (94px diameter) ----
   - id: 5
     name: apple
-    mass: 14.0
-    visual_radius: 62
+    mass: 16.0
+    visual_radius: 47
     collision_circles:
-      - [62, 0, 0]        # Original Suika size
+      - [47, 0, 0]
     merge_score: 21
     friction: 0.3
     elasticity: 0.35
     color_solid: [255, 0, 0]
     color_full: [178, 34, 34]
 
-  # ---- Level 6: Pear (pear-shaped composite) ----
+  # ---- Level 6: Pear (115px diameter) ----
   - id: 6
     name: pear
     mass: 24.0
-    visual_radius: 77
+    visual_radius: 58
     collision_circles:
-      - [52, 0, -12]      # Bottom bulge
-      - [38, 0, 28]       # Top narrow
+      - [39, 0, -10]      # Bottom bulge
+      - [29, 0, 22]       # Top narrow
     merge_score: 28
     friction: 0.35
     elasticity: 0.3
     color_solid: [154, 205, 50]
     color_full: [173, 255, 47]
 
-  # ---- Level 7: Peach ----
+  # ---- Level 7: Peach (140px diameter) ----
   - id: 7
     name: peach
-    mass: 38.0
-    visual_radius: 97
+    mass: 35.0
+    visual_radius: 70
     collision_circles:
-      - [97, 0, 0]        # Original Suika size
+      - [70, 0, 0]
     merge_score: 36
     friction: 0.35
     elasticity: 0.28
     color_solid: [255, 150, 180]
     color_full: [255, 130, 160]
 
-  # ---- Level 8: Pineapple (tall composite) ----
+  # ---- Level 8: Pineapple (165px diameter) ----
   - id: 8
     name: pineapple
-    mass: 60.0
-    visual_radius: 121
+    mass: 50.0
+    visual_radius: 83
     collision_circles:
-      - [72, 0, -20]      # Body (lower, wider)
-      - [55, 0, 50]       # Crown area (upper)
+      - [50, 0, -14]      # Body (lower, wider)
+      - [37, 0, 33]       # Crown area (upper)
     merge_score: 45
     friction: 0.4
     elasticity: 0.25
     color_solid: [255, 215, 0]
     color_full: [218, 165, 32]
 
-  # ---- Level 9: Melon (Honeydew) ----
+  # ---- Level 9: Banana (195px diameter) ----
   - id: 9
-    name: melon
-    mass: 90.0
-    visual_radius: 151
+    name: banana
+    mass: 75.0
+    visual_radius: 98
     collision_circles:
-      - [151, 0, 0]       # Original Suika size
+      - [98, 0, 0]
     merge_score: 55
     friction: 0.35
     elasticity: 0.22
-    color_solid: [127, 255, 0]
-    color_full: [144, 238, 144]
+    color_solid: [255, 230, 100]
+    color_full: [255, 220, 80]
 
-  # ---- Level 10: Watermelon (largest - two watermelons destroy each other) ----
+  # ---- Level 10: Watermelon (230px diameter) ----
   - id: 10
     name: watermelon
-    mass: 130.0
-    visual_radius: 189
+    mass: 100.0
+    visual_radius: 115
     collision_circles:
-      - [189, 0, 0]       # Original Suika size
+      - [115, 0, 0]
     merge_score: 66
     friction: 0.4
     elasticity: 0.18
     color_solid: [34, 139, 34]
     color_full: [50, 205, 50]
 
+  # ---- Level 11: Skull (67px diameter, same as Dekopon) ----
+  # Two watermelons merge into a skull. Skulls cannot merge with anything.
+  # Each skull on board multiplies all future points by 1.5x (2 skulls = 2x, etc.)
+  - id: 11
+    name: skull
+    mass: 30.0
+    visual_radius: 34
+    collision_circles:
+      - [34, 0, 0]
+    merge_score: 100      # Bonus for creating a skull
+    friction: 0.5
+    elasticity: 0.15
+    color_solid: [60, 60, 60]
+    color_full: [40, 40, 40]
+    is_final: true        # Cannot merge with anything
+
 # -----------------------------------------------------------------------------
 # Merge Configuration
 # -----------------------------------------------------------------------------
 merge:
   # Impulse applied to newly merged fruit (collision-reactive "pop")
-  impulse_upward: 280.0    # Base upward impulse magnitude
-  impulse_variance: 10.0   # Random variance in impulse
-  radial_impulse: 180.0    # Radial impulse to nearby fruits
+  # Reduced to prevent fruits from flying off the small arena
+  impulse_upward: 60.0     # Base upward impulse magnitude (reduced for small arena)
+  impulse_variance: 5.0    # Random variance in impulse
+  radial_impulse: 80.0     # Radial impulse to nearby fruits (reduced for stability)
 
 # -----------------------------------------------------------------------------
 # RNG / Spawn Queue Configuration
@@ -264,8 +288,8 @@ observation:
   max_objects: 200         # Padded array size for object observations
   include_angular: true    # Include angular position/velocity in obs
   
-  # Image observation settings (scaled to half board size for efficiency)
+  # Image observation settings (half board size for efficiency)
   image_enabled: false     # Set to true to include board_rgb in obs
-  image_width: 400         # Width of rendered image (half board width: 800/2)
-  image_height: 500        # Height of rendered image (half board height: 1000/2)
+  image_width: 200         # Width of rendered image (half board width: 400/2)
+  image_height: 250        # Height of rendered image (half board height: 500/2)
   render_style: "full"     # "solid" for blobs, "full" for sprites

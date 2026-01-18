@@ -68,6 +68,7 @@ class FruitConfig:
     elasticity: float
     color_solid: Tuple[int, int, int]
     color_full: Tuple[int, int, int]
+    is_final: bool = False  # If True, cannot merge with anything (e.g., skull)
 
 
 @dataclass(frozen=True)
@@ -192,7 +193,8 @@ def _parse_fruit(fruit_data: dict, default_friction: float, default_elasticity: 
         friction=float(fruit_data.get("friction", default_friction)),
         elasticity=float(fruit_data.get("elasticity", default_elasticity)),
         color_solid=_parse_color(fruit_data["color_solid"]),
-        color_full=_parse_color(fruit_data.get("color_full", fruit_data["color_solid"]))
+        color_full=_parse_color(fruit_data.get("color_full", fruit_data["color_solid"])),
+        is_final=bool(fruit_data.get("is_final", False))
     )
 
 

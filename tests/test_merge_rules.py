@@ -95,13 +95,13 @@ class TestMergeRules:
         remaining = list(physics.fruits.values())[0]
         assert remaining.type_id == 1
     
-    def test_melon_melon_merge_removes_both(self, physics, merger, catalog, scorer):
-        """Merging two melons removes both without spawning new fruit."""
-        melon = catalog.melon
+    def test_watermelon_watermelon_merge_creates_skull(self, physics, merger, catalog, scorer):
+        """Merging two watermelons creates a skull (final form)."""
+        watermelon = catalog.watermelon
         
-        # Spawn two melons at same position
-        physics.spawn_fruit(melon, 200, 300)
-        physics.spawn_fruit(melon, 200, 300)
+        # Spawn two watermelons at same position
+        physics.spawn_fruit(watermelon, 200, 300)
+        physics.spawn_fruit(watermelon, 200, 300)
         
         # Run simulation
         for _ in range(50):
@@ -110,8 +110,11 @@ class TestMergeRules:
             if merges:
                 break
         
-        # Both should be gone
-        assert physics.fruit_count == 0
+        # Should have one skull
+        assert physics.fruit_count == 1
+        remaining = list(physics.fruits.values())[0]
+        assert remaining.type_id == catalog.skull_id
+        assert catalog.is_final_fruit(remaining.type_id)
     
     def test_merge_awards_score(self, physics, merger, catalog, scorer):
         """Merging should increase score."""

@@ -120,6 +120,10 @@ class MergeSystem:
         if fruit_a.type_id != fruit_b.type_id:
             return
         
+        # Final fruits (like skull) cannot merge
+        if self._catalog.is_final_fruit(fruit_a.type_id):
+            return
+        
         # Get contact point and collision normal
         contact_set = arbiter.contact_point_set
         if len(contact_set.points) > 0:
@@ -256,19 +260,36 @@ class MergeSystem:
         self._physics.remove_fruit(fruit_a.uid)
         self._physics.remove_fruit(fruit_b.uid)
         
-        # Apply score
+        # Apply score (will be multiplied by skull count if applicable)
         score_event = self._scorer.apply_merge(type_id)
         
-        # Check if melon-melon merge
-        if self._catalog.is_melon(type_id):
-            # Both disappear, no new fruit
-            return MergeResult(
-                removed_uids=(fruit_a.uid, fruit_b.uid),
-                created_uid=None,
-                new_type_id=None,
-                position=(merge_x, merge_y),
-                score_event=score_event
-            )
+        # Watermelons merge into a skull (the final form)
+        if self._catalog.is_watermelon(type_id):
+            # Create a skull instead of removing both
+            skull_type = self._catalog.skull
+            if skull_type is not None:
+                new_uid = self._physics.spawn_fruit(
+                    skull_type,
+                    merge_x,
+                    merge_y,
+                    velocity=(0.0, 50.0)  # Small upward pop
+                )
+                return MergeResult(
+                    removed_uids=(fruit_a.uid, fruit_b.uid),
+                    created_uid=new_uid,
+                    new_type_id=skull_type.id,
+                    position=(merge_x, merge_y),
+                    score_event=score_event
+                )
+            else:
+                # No skull defined, just remove both
+                return MergeResult(
+                    removed_uids=(fruit_a.uid, fruit_b.uid),
+                    created_uid=None,
+                    new_type_id=None,
+                    position=(merge_x, merge_y),
+                    score_event=score_event
+                )
         
         # Spawn next fruit type
         next_type = self._catalog.get_next_type(type_id)

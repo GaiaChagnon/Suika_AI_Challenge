@@ -32,9 +32,9 @@ FRUITS_PNG_POSITIONS = {
     "melon": (2742, 54, 276, 276),  # The large watermelon
 }
 
-# Sprite positions in fruits2.png (honeydew and pineapple)
+# Sprite positions in fruits2.png (banana and pineapple)
 FRUITS2_PNG_POSITIONS = {
-    "honeydew": (48, 78, 240, 216),    # Left: honeydew (greenish melon)
+    "banana": (48, 78, 240, 216),      # Left: banana (yellow curved)
     "pineapple": (468, 36, 216, 300),  # Right: pineapple
 }
 
@@ -49,12 +49,14 @@ FRUIT_SOURCES = {
     "pear": ("fruits.png", FRUITS_PNG_POSITIONS["pear"]),
     "peach": "standalone",  # Standalone file with white background to remove
     "pineapple": ("fruits2.png", FRUITS2_PNG_POSITIONS["pineapple"]),
-    "honeydew": ("fruits2.png", FRUITS2_PNG_POSITIONS["honeydew"]),
-    "melon": ("fruits.png", FRUITS_PNG_POSITIONS["melon"]),
+    "banana": ("fruits2.png", FRUITS2_PNG_POSITIONS["banana"]),
+    "watermelon": ("fruits.png", FRUITS_PNG_POSITIONS["melon"]),  # Large striped melon sprite
+    "skull": "standalone",  # Skull - final form
 }
 
-# Standalone sprite files (need background removal)
+# Standalone sprite files (need background removal or auto-cropping)
 STANDALONE_SPRITES = {
+    "skull": "Skull.png",  # Skull - final form when watermelons merge
     "peach": "Peach.png",
 }
 
@@ -313,7 +315,7 @@ class SpriteLoader:
         # Define colors for missing fruits
         fallback_colors = {
             "peach": (255, 200, 180),
-            "honeydew": (200, 255, 180),
+            "banana": (255, 230, 100),
         }
         
         color = fallback_colors.get(name, (200, 200, 200))

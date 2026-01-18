@@ -145,6 +145,29 @@ class CoreGame:
         """The spawn queue (for preview access)."""
         return self._spawn_queue
     
+    @property
+    def skull_count(self) -> int:
+        """Number of skulls currently on board."""
+        return self._count_skulls()
+    
+    @property
+    def skull_multiplier(self) -> float:
+        """Current score multiplier from skulls (1.0 + 0.5 * skull_count)."""
+        return self._scorer.get_skull_multiplier()
+    
+    def _count_skulls(self) -> int:
+        """Count number of skull fruits currently on the board."""
+        skull_id = self._catalog.skull_id
+        count = 0
+        for fruit in self._physics.fruits.values():
+            if fruit.type_id == skull_id:
+                count += 1
+        return count
+    
+    def _update_skull_count(self) -> None:
+        """Update scorer's skull count from current physics state."""
+        self._scorer.skull_count = self._count_skulls()
+    
     def reset(self, seed: Optional[int] = None) -> GameSnapshot:
         """
         Reset game to initial state.
@@ -281,6 +304,8 @@ class CoreGame:
             merges = self._merger.resolve_merges()
             if merges:
                 all_merges.extend(merges)
+                # Update skull count for scoring multiplier
+                self._update_skull_count()
                 # Reset timer on merge - more time for chain reactions
                 if merge_resets_timer:
                     time_since_last_merge = 0.0
@@ -386,6 +411,8 @@ class CoreGame:
             "current_fruit_id": self.current_fruit_id,
             "next_fruit_id": self.next_fruit_id,
             "spawner_x_norm": self._last_spawner_x,
+            "skull_count": self.skull_count,
+            "skull_multiplier": self.skull_multiplier,
         }
     
     def spawn_current_fruit(self, action: float) -> bool:
