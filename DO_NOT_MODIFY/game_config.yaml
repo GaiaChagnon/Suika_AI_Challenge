@@ -16,9 +16,9 @@ board:
   width: 400               # Arena width
   height: 500              # Arena height
   
-  # Lose line: fruits above this for >1s = game over
+  # Lose line: fruits above this for >3s = game over
   lose_line_y: 475         # 95% of arena height
-  lose_line_grace_time: 1.0  # Seconds before game over triggers
+  lose_line_grace_time: 3.0  # Seconds before game over triggers
   
   # Spawn position
   spawn_y: 485             # Y coordinate where fruits spawn
@@ -45,8 +45,8 @@ physics:
   max_sim_seconds_per_drop: 8.0       # Hard cap before force-freeze (increased)
   merge_resets_timer: true            # Reset settle timer when merge happens
   
-  # Wall/floor friction (moderate for stable stacking)
-  default_friction: 0.5
+  # Wall/floor friction (lower for smoother sliding)
+  default_friction: 0.6
   default_elasticity: 0.3
 
 # -----------------------------------------------------------------------------
@@ -75,7 +75,7 @@ fruits:
     collision_circles:
       - [14, 0, 0]
     merge_score: 1
-    friction: 0.3
+    friction: 0.15
     elasticity: 0.5
     color_solid: [220, 20, 60]
     color_full: [220, 20, 60]
@@ -88,8 +88,8 @@ fruits:
     collision_circles:
       - [19, 0, 0]
     merge_score: 3
-    friction: 0.3
-    elasticity: 0.5
+    friction: 0.2
+    elasticity: 0.4
     color_solid: [255, 99, 71]
     color_full: [255, 99, 71]
 
@@ -103,7 +103,7 @@ fruits:
       - [14, -10, -5]     # Bottom left
       - [14, 10, -5]      # Bottom right
     merge_score: 6
-    friction: 0.35
+    friction: 0.3
     elasticity: 0.45
     color_solid: [128, 0, 128]
     color_full: [138, 43, 226]
@@ -116,7 +116,7 @@ fruits:
     collision_circles:
       - [34, 0, 0]
     merge_score: 10
-    friction: 0.3
+    friction: 0.2
     elasticity: 0.45
     color_solid: [255, 165, 0]
     color_full: [255, 140, 0]
@@ -129,7 +129,7 @@ fruits:
     collision_circles:
       - [39, 0, 0]
     merge_score: 15
-    friction: 0.3
+    friction: 0.2
     elasticity: 0.4
     color_solid: [255, 127, 80]
     color_full: [255, 99, 71]
@@ -142,7 +142,7 @@ fruits:
     collision_circles:
       - [47, 0, 0]
     merge_score: 21
-    friction: 0.3
+    friction: 0.2
     elasticity: 0.35
     color_solid: [255, 0, 0]
     color_full: [178, 34, 34]
@@ -156,7 +156,7 @@ fruits:
       - [39, 0, -10]      # Bottom bulge
       - [29, 0, 22]       # Top narrow
     merge_score: 28
-    friction: 0.35
+    friction: 0.2
     elasticity: 0.3
     color_solid: [154, 205, 50]
     color_full: [173, 255, 47]
@@ -169,7 +169,7 @@ fruits:
     collision_circles:
       - [70, 0, 0]
     merge_score: 36
-    friction: 0.35
+    friction: 0.2
     elasticity: 0.28
     color_solid: [255, 150, 180]
     color_full: [255, 130, 160]
@@ -183,7 +183,7 @@ fruits:
       - [50, 0, -14]      # Body (lower, wider)
       - [37, 0, 33]       # Crown area (upper)
     merge_score: 45
-    friction: 0.4
+    friction: 0.2
     elasticity: 0.25
     color_solid: [255, 215, 0]
     color_full: [218, 165, 32]
@@ -196,7 +196,7 @@ fruits:
     collision_circles:
       - [98, 0, 0]
     merge_score: 55
-    friction: 0.35
+    friction: 0.2
     elasticity: 0.22
     color_solid: [255, 230, 100]
     color_full: [255, 220, 80]
@@ -209,7 +209,7 @@ fruits:
     collision_circles:
       - [115, 0, 0]
     merge_score: 66
-    friction: 0.4
+    friction: 0.2
     elasticity: 0.18
     color_solid: [34, 139, 34]
     color_full: [50, 205, 50]
@@ -224,7 +224,7 @@ fruits:
     collision_circles:
       - [34, 0, 0]
     merge_score: 100      # Bonus for creating a skull
-    friction: 0.5
+    friction: 0.2
     elasticity: 0.15
     color_solid: [60, 60, 60]
     color_full: [40, 40, 40]
@@ -236,9 +236,9 @@ fruits:
 merge:
   # Impulse applied to newly merged fruit (collision-reactive "pop")
   # Reduced to prevent fruits from flying off the small arena
-  impulse_upward: 60.0     # Base upward impulse magnitude (reduced for small arena)
+  impulse_upward: 150.0     # Base upward impulse magnitude (reduced for small arena)
   impulse_variance: 5.0    # Random variance in impulse
-  radial_impulse: 80.0     # Radial impulse to nearby fruits (reduced for stability)
+  radial_impulse: 250.0     # Radial impulse to nearby fruits (reduced for stability)
 
 # -----------------------------------------------------------------------------
 # RNG / Spawn Queue Configuration
@@ -256,7 +256,7 @@ rng:
 # -----------------------------------------------------------------------------
 scoring:
   # Bonus for merging two melons (both disappear)
-  melon_melon_bonus: 50
+  melon_melon_bonus: 0
   
   # Per-fruit merge scores are defined in the fruits section above
 
