@@ -32,7 +32,7 @@ import time
 import os
 import numpy as np
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass, field
 
 # Optional dependency for resource monitoring
@@ -52,8 +52,8 @@ from DO_NOT_MODIFY.suika_core import SuikaEnv
 from DO_NOT_MODIFY.suika_core.async_vector_env import make_async_vec_env, get_recommended_num_envs
 
 
-# Path for replay file (in the same directory as this script)
-REPLAY_PATH = Path(__file__).parent / "replay.json"
+# Replays directory (auto-created)
+REPLAYS_DIR = Path(__file__).parent / "replays"
 
 
 @dataclass
@@ -78,51 +78,42 @@ class BenchmarkResults:
     peak_memory_mb: float = 0.0
 
 
-def save_replay(seed: int = 42) -> Dict[str, Any]:
+def save_replay(seed: int = 42) -> Tuple[Dict[str, Any], Path]:
     """
-    Play one episode and save it as a replay.
+    Play one episode and save it as a replay with auto-generated timestamp name.
+    
+    Uses the ReplayRecorder wrapper for easy recording.
+    Saves to the replays/ subdirectory with format: baseline_lidar_{timestamp}_s{seed}.json
     
     Args:
         seed: Random seed for the episode.
         
     Returns:
-        Replay data dict.
+        Tuple of (replay_data, saved_path).
     """
+    from DO_NOT_MODIFY.suika_core.replay_recorder import ReplayRecorder
+    
+    # Ensure replays directory exists
+    REPLAYS_DIR.mkdir(exist_ok=True)
+    
     env = SuikaEnv()
+    recorder = ReplayRecorder(env, agent_name="baseline_lidar")
     agent = SuikaAgent()
     
-    obs, info = env.reset(seed=seed)
+    obs, info = recorder.reset(seed=seed)
     agent.reset(seed=seed)
-    
-    replay_data = {
-        "seed": seed,
-        "agent": "baseline_lidar",
-        "actions": [],
-        "scores": [],
-        "final_score": 0,
-    }
     
     done = False
     while not done:
         action = agent.act(obs)
-        replay_data["actions"].append(float(action))
-        
-        obs, reward, terminated, truncated, info = env.step(action)
-        replay_data["scores"].append(int(info["score"]))
-        
+        obs, reward, terminated, truncated, info = recorder.step(action)
         done = terminated or truncated
     
-    replay_data["final_score"] = int(info["score"])
-    
-    # Delete old replay if exists, then save new one
-    if REPLAY_PATH.exists():
-        REPLAY_PATH.unlink()
-    
-    with open(REPLAY_PATH, "w") as f:
-        json.dump(replay_data, f, indent=2)
+    # Save with auto-generated timestamp name in replays directory
+    saved_path = recorder.save(directory=REPLAYS_DIR)
     
     env.close()
-    return replay_data
+    return recorder.get_replay_data(), saved_path
 
 
 def run_single_benchmark(
@@ -284,15 +275,15 @@ def run_benchmark(
     print()
     
     # Save replay of one episode
+    replay_path = None
     if save_replay_flag:
         print("Saving replay episode...")
-        replay = save_replay(seed=seed)
-        print(f"  Replay saved to: {REPLAY_PATH}")
+        replay, replay_path = save_replay(seed=seed)
         print(f"  Replay score: {replay['final_score']}")
         print(f"  Replay drops: {len(replay['actions'])}")
         print()
         print("  To view replay, run:")
-        print(f"    python tools/replay_viewer.py {REPLAY_PATH}")
+        print(f"    python tools/replay_viewer.py {replay_path}")
         print()
     
     total_start = time.time()
@@ -377,9 +368,7 @@ def print_results(results: BenchmarkResults) -> None:
     print(f"  Best Score: {score_stats['max']:.0f}")
     print(f"  Worst Score: {score_stats['min']:.0f}")
     print()
-    if REPLAY_PATH.exists():
-        print(f"  Replay saved: {REPLAY_PATH}")
-        print(f"  View with: python tools/replay_viewer.py {REPLAY_PATH}")
+    print(f"  Replays saved to: {REPLAYS_DIR}/")
     print()
     print("  Use this baseline to compare your agent's performance!")
     print("=" * 70)
@@ -403,8 +392,8 @@ Performance Notes:
   - Default num-envs = CPU cores ({default_envs} on this machine)
   - Don't use more envs than CPU cores (causes context-switching overhead)
   
-To view the saved replay:
-  python tools/replay_viewer.py contestants/baseline_lidar/replay.json
+To view saved replays:
+  python tools/replay_viewer.py contestants/baseline_lidar/replays/<filename>.json
         """
     )
     parser.add_argument(

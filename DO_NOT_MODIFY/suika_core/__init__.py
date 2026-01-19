@@ -22,6 +22,11 @@ from DO_NOT_MODIFY.suika_core.async_vector_env import (
     make_env,
     get_recommended_num_envs,
 )
+from DO_NOT_MODIFY.suika_core.replay_recorder import (
+    ReplayRecorder,
+    record_episode,
+    generate_replay_filename,
+)
 
 __all__ = [
     "GameConfig",
@@ -34,4 +39,7 @@ __all__ = [
     "make_async_vec_env",
     "make_env",
     "get_recommended_num_envs",
+    "ReplayRecorder",
+    "record_episode",
+    "generate_replay_filename",
 ]
