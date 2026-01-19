@@ -45,3 +45,6 @@ htmlcov/
 
 # OS
 Thumbs.db
+
+# Replays
+contestants/baseline_lidar/replays/
