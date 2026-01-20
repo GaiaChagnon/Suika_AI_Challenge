@@ -4,7 +4,7 @@ A Suika-style fruit-merging game designed as a competition environment for AI ag
 
 ## Overview
 
-Drop fruits from the top of the arena. When two fruits of the same type collide, they merge into a larger fruit. Score points by creating merges, with higher-level fruits worth more. The game ends if any fruit crosses the lose line for more than 1 second.
+Drop fruits from the top of the arena. When two fruits of the same type collide, they merge into a larger fruit. Score points by creating merges, with higher-level fruits worth more. The game ends if any fruit crosses the lose line for more than 3 seconds.
 
 ## Installation
 
@@ -46,8 +46,8 @@ for _ in range(1000):
 env = SuikaEnv(debug=True)  # Enables verbose output
 obs, info = env.reset()
 # [DEBUG] SuikaEnv initialized
-# [DEBUG]   Board: 450x600
-# [DEBUG]   Lose line Y: 540
+# [DEBUG]   Board: 400x500
+# [DEBUG]   Lose line Y: 475
 # [DEBUG]   Max objects: 200
 ```
 
@@ -119,7 +119,7 @@ python -m DO_NOT_MODIFY.evaluation.run_eval --agent contestants/team_template
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                        CONFIGURATION (game_config.yaml)                      │
 │  • Board dimensions, lose line position                                      │
-│  • 11 fruit types with mass, radius, collision shapes                        │
+│  • 12 fruit types (0-11) with mass, radius, collision shapes                 │
 │  • Physics: gravity, friction, elasticity                                    │
 │  • Scoring: points per merge                                                 │
 │  • RNG: spawn weights                                                        │
@@ -169,11 +169,11 @@ suika_competition/
 ## Coordinate System
 
 ```
-                 spawn_y (570)
+                 spawn_y (485)
                      ▲
-    ┌────────────────┬────────────────┐  ◄─ lose_line_y (540)
+    ┌────────────────┬────────────────┐  ◄─ lose_line_y (475)
     │                │                │     Game over if fruit stays
-    │                │                │     above this for >1 second
+    │                │                │     above this for >3 seconds
     │    GAME        │     AREA       │
     │                │                │
     │       Y        │                │
@@ -183,7 +183,7 @@ suika_competition/
     │       └──────► X                │
     │    (0,0)                        │
     └─────────────────────────────────┘
-   X=0                             X=board_width (450)
+   X=0                             X=board_width (400)
 
    • Origin (0, 0) is BOTTOM-LEFT
    • Y increases UPWARD
@@ -242,9 +242,9 @@ The environment returns a dictionary observation with these fields.
 ### Board Info (For Normalization)
 | Key | Shape | Description |
 |-----|-------|-------------|
-| `board_width` | `()` | Width of game board in pixels (450) |
-| `board_height` | `()` | Height of game board in pixels (600) |
-| `lose_line_y` | `()` | Y coordinate of the lose line (540) |
+| `board_width` | `()` | Width of game board in pixels (400) |
+| `board_height` | `()` | Height of game board in pixels (500) |
+| `lose_line_y` | `()` | Y coordinate of the lose line (475) |
 
 ### Object Arrays
 | Key | Shape | Description |
@@ -298,17 +298,18 @@ reward = -100 if terminated else info["delta_score"]  # Penalize death
 
 | ID | Name | Radius | Mass | Merge Score |
 |----|------|--------|------|-------------|
-| 0 | Cherry | 15 | 1.0 | 2 |
-| 1 | Strawberry | 22 | 2.0 | 4 |
-| 2 | Grape | 30 | 4.0 | 7 |
-| 3 | Dekopon | 42 | 8.0 | 11 |
-| 4 | Persimmon | 52 | 12.0 | 18 |
-| 5 | Apple | 62 | 18.0 | 30 |
-| 6 | Pear | 75 | 28.0 | 50 |
-| 7 | Peach | 88 | 40.0 | 80 |
-| 8 | Pineapple | 100 | 55.0 | 130 |
-| 9 | Honeydew | 115 | 75.0 | 210 |
-| 10 | Melon | 135 | 100.0 | 340 (+2000 bonus for melon-melon) |
+| 0 | Cherry | 14 | 1.0 | 1 |
+| 1 | Strawberry | 19 | 2.0 | 3 |
+| 2 | Grape | 29 | 4.0 | 6 |
+| 3 | Dekopon | 34 | 6.0 | 10 |
+| 4 | Persimmon | 39 | 10.0 | 15 |
+| 5 | Apple | 47 | 16.0 | 21 |
+| 6 | Pear | 58 | 24.0 | 28 |
+| 7 | Peach | 70 | 35.0 | 36 |
+| 8 | Pineapple | 83 | 50.0 | 45 |
+| 9 | Banana | 98 | 75.0 | 55 |
+| 10 | Watermelon | 115 | 100.0 | 66 |
+| 11 | Skull | 34 | 30.0 | 100 (cannot merge, 1.5x score multiplier per skull) |
 
 ---
 

@@ -10,9 +10,6 @@
 # -----------------------------------------------------------------------------
 board:
   # Arena: 400 x 500 (4:5 aspect ratio)
-  # Watermelon = 230px diameter (57.5% of width)
-  # Two watermelons CAN fit diagonally with 90px margin
-  # Two watermelons CANNOT fit side-by-side (460 > 400)
   width: 400               # Arena width
   height: 500              # Arena height
   
@@ -58,7 +55,7 @@ physics:
 # 
 # SCORING (matches original Suika game):
 #   Cherry:1, Strawberry:3, Grape:6, Dekopon:10, Persimmon:15,
-#   Apple:21, Pear:28, Peach:36, Pineapple:45, Melon:55, Watermelon:66
+#   Apple:21, Pear:28, Peach:36, Pineapple:45, Banana:55, Watermelon:66, Skull:100
 # -----------------------------------------------------------------------------
 fruits:
   # ==========================================================================

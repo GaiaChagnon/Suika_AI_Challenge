@@ -119,10 +119,10 @@ Typical results for the baseline agent:
 
 | Metric | Value |
 |--------|-------|
-| Mean Score | ~700-800 |
-| Median Score | ~650-750 |
-| Best Score | ~1500-2000 |
-| Worst Score | ~200-300 |
+| Mean Score | ~1700-1800 |
+| Median Score | ~1500-2000 |
+| Best Score | ~2000-3000 |
+| Worst Score | ~600-700 |
 
 Your agent should aim to beat these numbers!
 

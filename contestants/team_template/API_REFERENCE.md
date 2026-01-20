@@ -49,7 +49,7 @@ The observations are split into **six categories** based on their function:
 
 | Observation | Type | What It Tells You |
 |-------------|------|-------------------|
-| `current_fruit_id` | int | What fruit you're about to drop (0=cherry, 10=melon) |
+| `current_fruit_id` | int | What fruit you're about to drop (0=cherry, 10=watermelon) |
 | `next_fruit_id` | int | What's coming next (plan ahead!) |
 | `score` | int | Your current score |
 | `drops_used` | int | How many fruits you've dropped |
@@ -286,7 +286,7 @@ action = 0.0
 action = 0.3
 
 # Convert world X back to action
-def world_x_to_action(x, board_width=450):
+def world_x_to_action(x, board_width=400):
     return (x / board_width) * 2 - 1
 ```
 
@@ -315,9 +315,9 @@ obs, info = env.reset()
 **Fruit ID mapping:**
 ```
 0: Cherry      4: Persimmon   8: Pineapple
-1: Strawberry  5: Apple       9: Honeydew
-2: Grape       6: Pear       10: Melon (largest)
-3: Dekopon     7: Peach
+1: Strawberry  5: Apple       9: Banana
+2: Grape       6: Pear       10: Watermelon (largest)
+3: Dekopon     7: Peach      11: Skull (final, cannot merge)
 ```
 
 **Usage:**
@@ -337,9 +337,9 @@ if current <= 2 and next_fruit <= 2:
 
 | Key | Type | Shape | Value | Description |
 |-----|------|-------|-------|-------------|
-| `board_width` | float32 | () | 450.0 | Board width in pixels |
-| `board_height` | float32 | () | 600.0 | Board height in pixels |
-| `lose_line_y` | float32 | () | 540.0 | Y coordinate of lose line |
+| `board_width` | float32 | () | 400.0 | Board width in pixels |
+| `board_height` | float32 | () | 500.0 | Board height in pixels |
+| `lose_line_y` | float32 | () | 475.0 | Y coordinate of lose line |
 
 **Why included:** Makes it easy to normalize coordinates without hardcoding values.
 
@@ -361,6 +361,8 @@ danger_ratio = obs["obj_y"] / obs["lose_line_y"]
 | `danger_level` | float32 | () | [0.0, 1.0+] | Highest fruit Y / lose_line_y |
 | `highest_fruit_y` | float32 | () | [0.0, ∞) | Y position of topmost fruit |
 | `distance_to_lose_line` | float32 | () | (-∞, ∞) | `lose_line_y - highest_fruit_y` (negative = above line) |
+
+**Note:** The game has a 3-second grace period before triggering game over when a fruit is above the lose line.
 
 **Interpretation:**
 
@@ -532,10 +534,10 @@ if obs["packing_efficiency"] < 0.6 and obs["neighbor_discord"] > 3.0:
 
 **Slice mapping:**
 ```
-slice_idx = 0  → X in [0, 22.5]
-slice_idx = 1  → X in [22.5, 45]
+slice_idx = 0  → X in [0, 20]
+slice_idx = 1  → X in [20, 40]
 ...
-slice_idx = 19 → X in [427.5, 450]
+slice_idx = 19 → X in [380, 400]
 ```
 
 **Usage:**
@@ -739,12 +741,12 @@ Higher average score wins!
 ## Coordinate System
 
 ```
-                     spawn_y (570)
+                     spawn_y (485)
                          ▲
 ┌────────────────────────┼────────────────────────┐
 │                        │                        │
-│                   lose_line_y (540)             │ ◄─ Lose if fruit stays
-│ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ - │    above for >1 sec
+│                   lose_line_y (475)             │ ◄─ Lose if fruit stays
+│ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ - │    above for >3 sec
 │                        │                        │
 │                        │                        │
 │                        │                        │
@@ -759,17 +761,17 @@ Higher average score wins!
 │        (0,0)           │                        │
 │                        │                        │
 └────────────────────────┼────────────────────────┘
-X=0                      │                    X=board_width (450)
+X=0                      │                    X=board_width (400)
 ```
 
 **Key facts:**
 - Origin `(0, 0)` is **bottom-left**
 - Y increases **upward**
 - Gravity pulls **down** (negative Y direction)
-- `spawn_y` (570) is where fruits appear
-- `lose_line_y` (540) is the danger threshold
-- Board width = 450px
-- Board height = 600px
+- `spawn_y` (485) is where fruits appear
+- `lose_line_y` (475) is the danger threshold
+- Board width = 400px
+- Board height = 500px
 
 **Normalization helpers:**
 ```python
@@ -832,15 +834,15 @@ done = terminated or truncated
 Recommended input features:
 ```python
 features = np.concatenate([
-    [obs["current_fruit_id"] / 10.0],        # Normalize
-    [obs["next_fruit_id"] / 10.0],
+    [obs["current_fruit_id"] / 11.0],        # Normalize (0-11 for skull)
+    [obs["next_fruit_id"] / 11.0],
     [obs["danger_level"]],
     [obs["packing_efficiency"]],
     [obs["surface_roughness"] / 100.0],
     [obs["neighbor_discord"] / 5.0],
-    obs["height_map"] / 600.0,               # 20 values
-    [obs["center_of_mass_x"] / 450.0],
-    [obs["center_of_mass_y"] / 600.0],
+    obs["height_map"] / 500.0,               # 20 values
+    [obs["center_of_mass_x"] / 400.0],
+    [obs["center_of_mass_y"] / 500.0],
     # Total: ~26 features
 ])
 ```
@@ -852,7 +854,7 @@ features = np.concatenate([
 height_map = obs["height_map"].reshape(1, 20, 1)  # (batch, width, channels)
 
 # Or create a 2D occupancy grid
-grid = np.zeros((60, 45))  # 10px bins
+grid = np.zeros((50, 40))  # 10px bins for 400x500 board
 for i in range(len(obs["obj_mask"])):
     if obs["obj_mask"][i]:
         x_bin = int(obs["obj_x"][i] / 10)
@@ -869,9 +871,9 @@ tokens = []
 for i in range(200):
     if mask[i]:
         tokens.append([
-            obs["obj_type_id"][i] / 10.0,
-            obs["obj_x"][i] / 450.0,
-            obs["obj_y"][i] / 600.0,
+            obs["obj_type_id"][i] / 11.0,
+            obs["obj_x"][i] / 400.0,
+            obs["obj_y"][i] / 500.0,
             obs["obj_vx"][i] / 100.0,
             obs["obj_vy"][i] / 100.0,
         ])

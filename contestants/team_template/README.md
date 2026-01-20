@@ -65,7 +65,7 @@ This template provides everything you need to build and evaluate an AI agent for
 │  6. Repeat until game over                              │
 │                                                         │
 │  Game ends when:                                        │
-│  - A fruit stays above lose_line for >1 second          │
+│  - A fruit stays above lose_line for >3 seconds         │
 │  - Maximum drops reached (10,000)                       │
 └─────────────────────────────────────────────────────────┘
 ```
