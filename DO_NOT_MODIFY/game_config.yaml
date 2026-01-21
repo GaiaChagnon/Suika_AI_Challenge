@@ -264,6 +264,12 @@ caps:
   max_drops: 10000         # Maximum fruits that can be dropped per episode
   max_objects: 200         # Maximum simultaneous fruits (safety limit)
   # max_score: null        # Optional score cap (disabled)
+  
+  # Out-of-bounds termination: If any fruit goes further than this distance
+  # beyond the board edges, the game terminates immediately.
+  # This catches runaway fruits from physics glitches (e.g., fruits ejected
+  # by merge impulses that fly off and never return).
+  out_of_bounds_distance: 300  # Pixels beyond board edge before termination
 
 # -----------------------------------------------------------------------------
 # Domain Randomization

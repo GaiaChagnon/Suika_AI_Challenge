@@ -405,6 +405,33 @@ class PhysicsWorld:
         """Get all fruits with top edge above the specified Y coordinate."""
         return [f for f in self._fruits.values() if f.top_y > y]
     
+    def get_fruits_out_of_bounds(self, margin: float) -> List[FruitBody]:
+        """
+        Get all fruits that are far outside the board boundaries.
+        
+        A fruit is considered out of bounds if its center is beyond the
+        board edges by more than the specified margin. This catches fruits
+        that have been ejected by physics glitches and won't return.
+        
+        Args:
+            margin: Distance in pixels beyond board edge to trigger detection.
+            
+        Returns:
+            List of fruits that are out of bounds.
+        """
+        out_of_bounds = []
+        min_x = -margin
+        max_x = self._config.board.width + margin
+        min_y = -margin
+        max_y = self._config.board.height + margin
+        
+        for fruit in self._fruits.values():
+            x, y = fruit.position
+            if x < min_x or x > max_x or y < min_y or y > max_y:
+                out_of_bounds.append(fruit)
+        
+        return out_of_bounds
+    
     def apply_impulse(
         self,
         uid: int,

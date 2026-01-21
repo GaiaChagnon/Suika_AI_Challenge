@@ -98,6 +98,7 @@ class CapsConfig:
     """Game limits."""
     max_drops: int
     max_objects: int
+    out_of_bounds_distance: float  # Pixels beyond board edge before termination
 
 
 @dataclass(frozen=True)
@@ -315,7 +316,8 @@ def load_config(config_path: Optional[str] = None) -> GameConfig:
     caps_data = raw["caps"]
     caps = CapsConfig(
         max_drops=int(caps_data["max_drops"]),
-        max_objects=int(caps_data.get("max_objects", 200))
+        max_objects=int(caps_data.get("max_objects", 200)),
+        out_of_bounds_distance=float(caps_data.get("out_of_bounds_distance", 300.0))
     )
     
     obs_data = raw["observation"]

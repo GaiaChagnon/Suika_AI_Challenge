@@ -134,6 +134,7 @@ class TerminationRules:
     
     - Lose line: Fruits above line for > grace time
     - Drop cap: Maximum drops per episode
+    - Out of bounds: Fruit ejected beyond safe distance from board
     """
     
     def __init__(self, config: Optional[GameConfig] = None):
@@ -151,6 +152,7 @@ class TerminationRules:
         self._grace_time = config.board.lose_line_grace_time
         self._max_drops = config.caps.max_drops
         self._max_objects = config.caps.max_objects
+        self._out_of_bounds_distance = config.caps.out_of_bounds_distance
         
         # Track time above lose line per fruit
         self._above_line_time: float = 0.0
@@ -165,6 +167,11 @@ class TerminationRules:
     def max_drops(self) -> int:
         """Maximum drops per episode."""
         return self._max_drops
+    
+    @property
+    def out_of_bounds_distance(self) -> float:
+        """Distance beyond board edge that triggers out-of-bounds termination."""
+        return self._out_of_bounds_distance
     
     def reset(self) -> None:
         """Reset termination state."""
@@ -195,7 +202,8 @@ class TerminationRules:
         self,
         drops_used: int,
         fruit_count: int,
-        any_above_line: bool
+        any_above_line: bool,
+        any_out_of_bounds: bool = False
     ) -> TerminationResult:
         """
         Check all termination conditions.
@@ -204,10 +212,15 @@ class TerminationRules:
             drops_used: Number of fruits dropped so far.
             fruit_count: Current number of fruits on board.
             any_above_line: True if any fruit is above lose line.
+            any_out_of_bounds: True if any fruit is beyond the safe boundary.
             
         Returns:
             TerminationResult indicating game state.
         """
+        # Check out of bounds (immediate termination for physics glitches)
+        if any_out_of_bounds:
+            return TerminationResult.game_over("out_of_bounds")
+        
         # Check lose line (1-second rule)
         if any_above_line and self._above_line_time >= self._grace_time:
             return TerminationResult.game_over("lose_line")

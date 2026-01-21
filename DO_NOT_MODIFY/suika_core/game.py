@@ -344,10 +344,15 @@ class CoreGame:
             self._rules.termination.lose_line_y
         )
         
+        fruits_out_of_bounds = self._physics.get_fruits_out_of_bounds(
+            self._rules.termination.out_of_bounds_distance
+        )
+        
         return self._rules.termination.check_termination(
             drops_used=self._drops_used,
             fruit_count=self._physics.fruit_count,
-            any_above_line=len(fruits_above) > 0
+            any_above_line=len(fruits_above) > 0,
+            any_out_of_bounds=len(fruits_out_of_bounds) > 0
         )
     
     def _build_snapshot(
