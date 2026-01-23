@@ -274,18 +274,6 @@ def run_benchmark(
     print("=" * 70)
     print()
     
-    # Save replay of one episode
-    replay_path = None
-    if save_replay_flag:
-        print("Saving replay episode...")
-        replay, replay_path = save_replay(seed=seed)
-        print(f"  Replay score: {replay['final_score']}")
-        print(f"  Replay drops: {len(replay['actions'])}")
-        print()
-        print("  To view replay, run:")
-        print(f"    python tools/replay_viewer.py {replay_path}")
-        print()
-    
     total_start = time.time()
     
     for run_idx in range(num_runs):
@@ -319,6 +307,17 @@ def run_benchmark(
     all_steps_per_sec = [m.steps_per_second for m in results.run_metrics]
     results.avg_steps_per_second = np.mean(all_steps_per_sec)
     results.peak_memory_mb = max((m.memory_peak_mb for m in results.run_metrics), default=0)
+    
+    # Save replay of one episode AFTER benchmark completes
+    if save_replay_flag:
+        print("Saving replay episode...")
+        replay, replay_path = save_replay(seed=seed)
+        print(f"  Replay score: {replay['final_score']}")
+        print(f"  Replay drops: {len(replay['actions'])}")
+        print()
+        print("  To view replay, run:")
+        print(f"    python tools/replay_viewer.py {replay_path}")
+        print()
     
     return results
 
