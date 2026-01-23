@@ -13,7 +13,6 @@ Controls:
 
 Usage:
     python -m tools.play_human [--seed SEED] [--width WIDTH] [--height HEIGHT]
-    python -m tools.play_human --show-reward  # Display shaped reward from Gaia_AI
 """
 
 from __future__ import annotations
@@ -32,116 +31,6 @@ except ImportError:
 
 from DO_NOT_MODIFY.suika_core.config_loader import load_config, GameConfig
 from DO_NOT_MODIFY.suika_core.game import CoreGame
-
-
-class RewardTracker:
-    """
-    Tracks and computes shaped rewards using the Gaia_AI reward function.
-    
-    Reward formula:
-        shaped_reward = (w_score * delta_score * reward_scale) - (w_danger * penalty)
-        
-    Where penalty:
-        if danger > threshold:
-            normalized = (danger - threshold) / (1 - threshold)
-            penalty = alpha * (normalized ** p)
-        else:
-            penalty = 0
-            
-    On terminal (death): -terminal_penalty
-    """
-    
-    def __init__(
-        self,
-        w_score: float = 1.0,
-        w_danger: float = 0.5,
-        danger_threshold: float = 0.5,
-        alpha: float = 2.0,
-        p: float = 2.0,
-        terminal_penalty: float = 10.0,
-        reward_scale: float = 0.01
-    ):
-        self.w_score = w_score
-        self.w_danger = w_danger
-        self.danger_threshold = danger_threshold
-        self.alpha = alpha
-        self.p = p
-        self.terminal_penalty = terminal_penalty
-        self.reward_scale = reward_scale
-        
-        # Episode tracking
-        self._episode_shaped_reward = 0.0
-        self._last_step_reward = 0.0
-        self._last_danger_penalty = 0.0
-        self._last_score_reward = 0.0
-    
-    def reset(self) -> None:
-        """Reset episode tracking."""
-        self._episode_shaped_reward = 0.0
-        self._last_step_reward = 0.0
-        self._last_danger_penalty = 0.0
-        self._last_score_reward = 0.0
-    
-    def compute_reward(
-        self,
-        delta_score: float,
-        danger: float,
-        terminated: bool = False
-    ) -> float:
-        """
-        Compute shaped reward for a single step.
-        
-        Args:
-            delta_score: Score gained this step
-            danger: Current danger level (0-1)
-            terminated: Whether episode ended (death)
-            
-        Returns:
-            Shaped reward value
-        """
-        # Scale score reward
-        score_reward = self.w_score * delta_score * self.reward_scale
-        self._last_score_reward = score_reward
-        
-        # Compute danger penalty
-        if danger > self.danger_threshold:
-            normalized = (danger - self.danger_threshold) / (1.0 - self.danger_threshold + 1e-8)
-            penalty = self.alpha * (normalized ** self.p)
-        else:
-            penalty = 0.0
-        self._last_danger_penalty = self.w_danger * penalty
-        
-        # Combine components
-        shaped = score_reward - self._last_danger_penalty
-        
-        # Terminal penalty on death
-        if terminated:
-            shaped -= self.terminal_penalty
-        
-        self._last_step_reward = shaped
-        self._episode_shaped_reward += shaped
-        
-        return shaped
-    
-    @property
-    def episode_reward(self) -> float:
-        """Total shaped reward this episode."""
-        return self._episode_shaped_reward
-    
-    @property
-    def last_reward(self) -> float:
-        """Last computed step reward."""
-        return self._last_step_reward
-    
-    @property
-    def last_danger_penalty(self) -> float:
-        """Last danger penalty component."""
-        return self._last_danger_penalty
-    
-    @property
-    def last_score_reward(self) -> float:
-        """Last score reward component."""
-        return self._last_score_reward
 
 
 class SuikaRenderer:
@@ -234,9 +123,7 @@ class SuikaRenderer:
         render_data: dict,
         spawner_screen_x: Optional[int] = None,
         game_over: bool = False,
-        final_score: int = 0,
-        reward_tracker: Optional['RewardTracker'] = None,
-        final_reward: float = 0.0
+        final_score: int = 0
     ) -> None:
         """Render the complete game scene."""
         # Background
@@ -255,15 +142,15 @@ class SuikaRenderer:
         if spawner_screen_x is not None and not game_over:
             self._draw_spawner(screen, render_data, spawner_screen_x)
         
-        # Top UI (score + optional reward)
-        self._draw_score_ui(screen, render_data, reward_tracker)
+        # Top UI (score)
+        self._draw_score_ui(screen, render_data)
         
         # Bottom UI (controls)
         self._draw_controls_ui(screen)
         
         # Game over overlay
         if game_over:
-            self._draw_game_over(screen, final_score, final_reward, reward_tracker is not None)
+            self._draw_game_over(screen, final_score)
     
     def _draw_evolution_panel(self, screen: pygame.Surface, render_data: dict) -> None:
         """Draw the fruit evolution wheel on the right panel with uniform icon sizes."""
@@ -497,13 +384,8 @@ class SuikaRenderer:
         # Small drop point indicator
         pygame.draw.circle(screen, self._text_dark, (screen_x, spawn_y_screen), 4)
     
-    def _draw_score_ui(
-        self, 
-        screen: pygame.Surface, 
-        render_data: dict,
-        reward_tracker: Optional['RewardTracker'] = None
-    ) -> None:
-        """Draw score, reward info, and next fruit at the top."""
+    def _draw_score_ui(self, screen: pygame.Surface, render_data: dict) -> None:
+        """Draw score and next fruit at the top."""
         # Score
         score_text = f"SCORE"
         score_label = self._font_medium.render(score_text, True, self._text_light)
@@ -514,33 +396,11 @@ class SuikaRenderer:
         
         # Skull multiplier (if any skulls present)
         skull_count = render_data.get("skull_count", 0)
-        y_offset = 78
         if skull_count > 0:
             multiplier = render_data.get("skull_multiplier", 1.0)
-            mult_text = f"x{multiplier:.1f} ({skull_count} skull)"
+            mult_text = f"x{multiplier:.1f} ({skull_count}💀)"
             mult_surface = self._font_small.render(mult_text, True, (100, 50, 150))
-            screen.blit(mult_surface, (20, y_offset))
-            y_offset += 18
-        
-        # Reward display (if tracker provided)
-        if reward_tracker is not None:
-            # Episode total reward
-            reward_color = (50, 150, 50) if reward_tracker.episode_reward >= 0 else (200, 50, 50)
-            reward_label = self._font_small.render("REWARD", True, self._text_light)
-            screen.blit(reward_label, (20, y_offset))
-            y_offset += 16
-            
-            reward_value = self._font_medium.render(
-                f"{reward_tracker.episode_reward:+.2f}", True, reward_color
-            )
-            screen.blit(reward_value, (20, y_offset))
-            y_offset += 24
-            
-            # Danger penalty indicator (show when non-zero)
-            if reward_tracker.last_danger_penalty > 0.01:
-                penalty_text = f"Danger: -{reward_tracker.last_danger_penalty:.2f}"
-                penalty_surface = self._font_small.render(penalty_text, True, (200, 80, 80))
-                screen.blit(penalty_surface, (20, y_offset))
+            screen.blit(mult_surface, (20, 78))
         
         # Next fruit box
         next_x = self._game_area_width - 110
@@ -592,22 +452,15 @@ class SuikaRenderer:
             
             x += box_width + action_text.get_width() + 25
     
-    def _draw_game_over(
-        self, 
-        screen: pygame.Surface, 
-        score: int,
-        final_reward: float = 0.0,
-        show_reward: bool = False
-    ) -> None:
+    def _draw_game_over(self, screen: pygame.Surface, score: int) -> None:
         """Draw game over overlay."""
         # Semi-transparent overlay
         overlay = pygame.Surface((self._window_width, self._window_height), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 150))
         screen.blit(overlay, (0, 0))
         
-        # Game over box - taller if showing reward
-        box_w = 300
-        box_h = 220 if show_reward else 180
+        # Game over box
+        box_w, box_h = 300, 180
         box_x = (self._game_area_width - box_w) // 2
         box_y = (self._window_height - box_h) // 2
         
@@ -616,21 +469,13 @@ class SuikaRenderer:
         
         # Text
         title = self._font_huge.render("GAME OVER", True, self._text_dark)
-        screen.blit(title, (box_x + (box_w - title.get_width()) // 2, box_y + 20))
+        screen.blit(title, (box_x + (box_w - title.get_width()) // 2, box_y + 25))
         
         score_text = self._font_large.render(f"Score: {score:,}", True, self._text_dark)
-        screen.blit(score_text, (box_x + (box_w - score_text.get_width()) // 2, box_y + 75))
-        
-        # Show reward if enabled
-        y_offset = 115
-        if show_reward:
-            reward_color = (50, 150, 50) if final_reward >= 0 else (200, 50, 50)
-            reward_text = self._font_large.render(f"Reward: {final_reward:+.2f}", True, reward_color)
-            screen.blit(reward_text, (box_x + (box_w - reward_text.get_width()) // 2, box_y + y_offset))
-            y_offset += 45
+        screen.blit(score_text, (box_x + (box_w - score_text.get_width()) // 2, box_y + 85))
         
         hint = self._font_medium.render("Press R to restart", True, self._text_light)
-        screen.blit(hint, (box_x + (box_w - hint.get_width()) // 2, box_y + y_offset))
+        screen.blit(hint, (box_x + (box_w - hint.get_width()) // 2, box_y + 130))
     
     def _world_to_screen_x(self, world_x: float) -> int:
         """Convert world X to screen X."""
@@ -655,8 +500,6 @@ class HumanPlayer:
     """
     Human-playable Suika game with real-time physics animation
     and time acceleration for faster settling.
-    
-    Optionally displays shaped reward using the Gaia_AI reward function.
     """
     
     def __init__(
@@ -665,29 +508,8 @@ class HumanPlayer:
         seed: Optional[int] = None,
         window_width: int = 700,
         window_height: int = 800,
-        target_fps: int = 60,
-        show_reward: bool = False,
-        reward_config: Optional[dict] = None
+        target_fps: int = 60
     ):
-        """
-        Initialize human player.
-        
-        Args:
-            config: Game configuration
-            seed: Random seed for reproducibility
-            window_width: Window width in pixels
-            window_height: Window height in pixels
-            target_fps: Target frames per second
-            show_reward: If True, display shaped reward from Gaia_AI reward function
-            reward_config: Optional dict with reward parameters:
-                - w_score: Score weight (default 1.0)
-                - w_danger: Danger penalty weight (default 0.5)
-                - danger_threshold: Danger threshold (default 0.5)
-                - alpha: Penalty magnitude (default 2.0)
-                - p: Penalty curvature (default 2.0)
-                - terminal_penalty: Death penalty (default 10.0)
-                - reward_scale: Overall scale (default 0.01)
-        """
         if not PYGAME_AVAILABLE:
             raise ImportError("pygame required. Install: pip install pygame")
         
@@ -699,21 +521,6 @@ class HumanPlayer:
         self._window_width = window_width
         self._window_height = window_height
         self._target_fps = target_fps
-        self._show_reward = show_reward
-        
-        # Initialize reward tracker if enabled
-        self._reward_tracker: Optional[RewardTracker] = None
-        if show_reward:
-            rc = reward_config or {}
-            self._reward_tracker = RewardTracker(
-                w_score=rc.get("w_score", 1.0),
-                w_danger=rc.get("w_danger", 0.5),
-                danger_threshold=rc.get("danger_threshold", 0.5),
-                alpha=rc.get("alpha", 2.0),
-                p=rc.get("p", 2.0),
-                terminal_penalty=rc.get("terminal_penalty", 10.0),
-                reward_scale=rc.get("reward_scale", 0.01)
-            )
         
         # Initialize game
         self._game = CoreGame(config=config, seed=seed)
@@ -722,8 +529,7 @@ class HumanPlayer:
         # Initialize pygame
         pygame.init()
         self._screen = pygame.display.set_mode((window_width, window_height))
-        caption = "Suika Game" + (" [Reward Mode]" if show_reward else "")
-        pygame.display.set_caption(caption)
+        pygame.display.set_caption("Suika Game")
         self._clock = pygame.time.Clock()
         
         # Initialize renderer
@@ -736,7 +542,6 @@ class HumanPlayer:
         self._settle_start_time = 0.0
         self._settle_ticks = 0
         self._consecutive_settled = 0
-        self._final_reward = 0.0
         
         # Drop cooldown to prevent spawning fruits too close together
         self._last_drop_time = 0.0
@@ -750,15 +555,10 @@ class HumanPlayer:
         # For smooth physics (no time acceleration - same as AI mode)
         self._physics_accumulator = 0.0
         self._last_time = time.time()
-        
-        # Track previous score for delta calculation
-        self._prev_score = 0
     
     def run(self) -> int:
         """Run the game loop. Returns final score."""
         print("=== Suika Game ===")
-        if self._show_reward:
-            print("Reward Mode: Displaying shaped reward from Gaia_AI reward function")
         print("Click or Space to drop fruit (you can drop while settling!)")
         print("R to restart, ESC to quit")
         print()
@@ -863,27 +663,8 @@ class HumanPlayer:
             is_settled, delta_score, merges = self._game.tick_physics()
             self._settle_ticks += 1
             
-            # Calculate delta score for reward computation
-            current_score = self._game.score
-            step_delta = current_score - self._prev_score
-            self._prev_score = current_score
-            
-            if step_delta > 0:
-                print(f"  +{step_delta} (Total: {current_score})")
-            
-            # Compute reward if tracking
-            if self._reward_tracker is not None and step_delta > 0:
-                # Get danger level from game state
-                render_data = self._game.get_render_data()
-                danger = self._compute_danger_level(render_data)
-                
-                reward = self._reward_tracker.compute_reward(
-                    delta_score=step_delta,
-                    danger=danger,
-                    terminated=False
-                )
-                if abs(reward) > 0.001:
-                    print(f"    Reward: {reward:+.3f} (Total: {self._reward_tracker.episode_reward:+.2f})")
+            if delta_score > 0:
+                print(f"  +{delta_score} (Total: {self._game.score})")
             
             # Check settle - but don't stop physics in human mode
             # Just check for game over conditions
@@ -898,24 +679,8 @@ class HumanPlayer:
                 if terminated or truncated:
                     self._game_over = True
                     self._settling = False
-                    
-                    # Apply terminal penalty if reward tracking
-                    if self._reward_tracker is not None and terminated:
-                        render_data = self._game.get_render_data()
-                        danger = self._compute_danger_level(render_data)
-                        self._reward_tracker.compute_reward(
-                            delta_score=0,
-                            danger=danger,
-                            terminated=True
-                        )
-                    
-                    self._final_reward = self._reward_tracker.episode_reward if self._reward_tracker else 0.0
-                    
                     if terminated:
-                        msg = f"\nGAME OVER - Score: {self._game.score}"
-                        if self._reward_tracker:
-                            msg += f" | Reward: {self._final_reward:+.2f}"
-                        print(msg)
+                        print(f"\nGAME OVER - Score: {self._game.score}")
                     else:
                         print(f"\nGAME COMPLETE - Score: {self._game.score}")
                     return
@@ -927,46 +692,12 @@ class HumanPlayer:
                 self._consecutive_settled = 0
                 self._settle_start_time = current_time
     
-    def _compute_danger_level(self, render_data: dict) -> float:
-        """
-        Compute danger level (0-1) based on highest fruit position.
-        
-        Args:
-            render_data: Game render data with fruit positions
-            
-        Returns:
-            Danger level from 0 (safe) to 1 (at lose line)
-        """
-        fruits = render_data.get("fruits", [])
-        if not fruits:
-            return 0.0
-        
-        lose_line_y = render_data.get("lose_line_y", self._config.board.lose_line_y)
-        board_height = self._config.board.height
-        
-        # Find highest fruit (highest Y value in our coordinate system)
-        highest_y = max(f["y"] + f.get("visual_radius", 10) for f in fruits)
-        
-        # Danger is how close the highest fruit is to the lose line
-        if highest_y >= lose_line_y:
-            return 1.0
-        
-        # Normalize: 0 at bottom, 1 at lose line
-        danger = highest_y / lose_line_y
-        return min(1.0, max(0.0, danger))
-    
     def _restart(self) -> None:
         """Restart the game."""
         self._game.reset(seed=self._seed)
         self._game_over = False
         self._settling = False
         self._last_drop_time = 0.0  # Reset cooldown
-        self._prev_score = 0
-        self._final_reward = 0.0
-        
-        if self._reward_tracker is not None:
-            self._reward_tracker.reset()
-        
         print("\n=== Game Restarted ===\n")
     
     def _render(self) -> None:
@@ -983,90 +714,20 @@ class HumanPlayer:
             render_data,
             spawner_screen_x=spawner_x,
             game_over=self._game_over,
-            final_score=self._game.score,
-            reward_tracker=self._reward_tracker,
-            final_reward=self._final_reward
+            final_score=self._game.score
         )
         
         pygame.display.flip()
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Play Suika game interactively",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Reward Mode (--show-reward):
-  Displays the shaped reward from the Gaia_AI reward function in real-time.
-  
-  Reward formula:
-    reward = (w_score * delta_score * reward_scale) - (w_danger * penalty)
-    
-  Where penalty is computed when danger > threshold:
-    penalty = alpha * ((danger - threshold) / (1 - threshold)) ^ p
-    
-  On death: -terminal_penalty is applied.
-  
-  Default parameters (configurable via flags):
-    --w-score 1.0           Score weight
-    --w-danger 0.5          Danger penalty weight
-    --danger-threshold 0.5  Danger level before penalty applies
-    --alpha 2.0             Penalty magnitude
-    --p 2.0                 Penalty curvature exponent
-    --terminal-penalty 10.0 One-time death penalty
-    --reward-scale 0.01     Overall reward multiplier
-
-Examples:
-  python -m tools.play_human --show-reward
-  python -m tools.play_human --show-reward --seed 42
-  python -m tools.play_human --show-reward --w-danger 1.0 --terminal-penalty 20.0
-"""
-    )
-    
-    # Basic options
+    parser = argparse.ArgumentParser(description="Play Suika game interactively")
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
     parser.add_argument("--width", type=int, default=600, help="Window width (default: 600)")
     parser.add_argument("--height", type=int, default=700, help="Window height (default: 700)")
     parser.add_argument("--fps", type=int, default=60, help="Target FPS")
     
-    # Reward display options
-    parser.add_argument("--show-reward", action="store_true",
-                        help="Display shaped reward from Gaia_AI reward function")
-    
-    # Reward function parameters (only used with --show-reward)
-    parser.add_argument("--w-score", type=float, default=1.0,
-                        help="Score reward weight (default: 1.0)")
-    parser.add_argument("--w-danger", type=float, default=0.5,
-                        help="Danger penalty weight (default: 0.5)")
-    parser.add_argument("--danger-threshold", type=float, default=0.5,
-                        help="Danger level threshold (default: 0.5)")
-    parser.add_argument("--alpha", type=float, default=2.0,
-                        help="Penalty magnitude (default: 2.0)")
-    parser.add_argument("--p", type=float, default=2.0,
-                        help="Penalty curvature exponent (default: 2.0)")
-    parser.add_argument("--terminal-penalty", type=float, default=10.0,
-                        help="One-time death penalty (default: 10.0)")
-    parser.add_argument("--reward-scale", type=float, default=0.01,
-                        help="Overall reward multiplier (default: 0.01)")
-    
     args = parser.parse_args()
-    
-    # Build reward config if show_reward is enabled
-    reward_config = None
-    if args.show_reward:
-        reward_config = {
-            "w_score": args.w_score,
-            "w_danger": args.w_danger,
-            "danger_threshold": args.danger_threshold,
-            "alpha": args.alpha,
-            "p": args.p,
-            "terminal_penalty": args.terminal_penalty,
-            "reward_scale": args.reward_scale
-        }
-        print("Reward function parameters:")
-        for key, value in reward_config.items():
-            print(f"  {key}: {value}")
-        print()
     
     try:
         config = load_config()
@@ -1075,14 +736,10 @@ Examples:
             seed=args.seed,
             window_width=args.width,
             window_height=args.height,
-            target_fps=args.fps,
-            show_reward=args.show_reward,
-            reward_config=reward_config
+            target_fps=args.fps
         )
         score = player.run()
         print(f"\nFinal Score: {score}")
-        if args.show_reward and player._reward_tracker:
-            print(f"Final Reward: {player._reward_tracker.episode_reward:+.2f}")
         return 0
     except ImportError as e:
         print(f"Error: {e}")
