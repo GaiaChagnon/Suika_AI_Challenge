@@ -3,7 +3,8 @@ Solid Renderer
 ==============
 
 Fast numpy-based renderer that draws fruits as solid-color circles.
-No pygame dependency required.
+Shows collision hitboxes, score display, and fruit legend.
+Uses OpenCV for text rendering when available.
 """
 
 from __future__ import annotations
@@ -14,25 +15,39 @@ import numpy as np
 
 from DO_NOT_MODIFY.suika_core.config_loader import GameConfig, get_config
 
+# Try to import cv2 for text rendering
+try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError:
+    CV2_AVAILABLE = False
+
 
 class SolidRenderer:
     """
     Renders the game board as solid-color circles.
     
+    Features:
+    - Draws actual collision hitboxes (not visual radius)
+    - Shows score display
+    - Shows fruit legend with colors
+    
     Uses numpy for fast CPU-based rendering without pygame.
     """
     
-    def __init__(self, config: Optional[GameConfig] = None):
+    def __init__(self, config: Optional[GameConfig] = None, show_legend: bool = True):
         """
         Initialize renderer.
         
         Args:
             config: Game configuration. Uses default if None.
+            show_legend: Whether to show the fruit legend.
         """
         if config is None:
             config = get_config()
         
         self._config = config
+        self._show_legend = show_legend
         
         # Background color (dark gray)
         self._bg_color = np.array([30, 30, 40], dtype=np.uint8)
@@ -42,6 +57,19 @@ class SolidRenderer:
         
         # Lose line color (red, semi-transparent effect)
         self._lose_line_color = np.array([200, 50, 50], dtype=np.uint8)
+        
+        # UI colors
+        self._text_color = (255, 255, 255)  # White
+        self._text_shadow = (40, 40, 50)
+        
+        # Build fruit info for legend
+        self._fruit_info = []
+        for fruit_cfg in config.fruits:
+            self._fruit_info.append({
+                "id": fruit_cfg.id,
+                "name": fruit_cfg.name,
+                "color": fruit_cfg.color_solid,
+            })
     
     def render(
         self,
@@ -60,47 +88,192 @@ class SolidRenderer:
         Returns:
             (height, width, 3) uint8 array.
         """
+        # Reserve space for legend at bottom
+        legend_height = 80 if self._show_legend else 0
+        game_height = height - legend_height
+        
         # Create image
         img = np.zeros((height, width, 3), dtype=np.uint8)
         img[:] = self._bg_color
         
-        # Calculate scale
+        # Calculate scale for game area
         board_width = render_data["board_width"]
         board_height = render_data["board_height"]
         scale_x = width / board_width
-        scale_y = height / board_height
+        scale_y = game_height / board_height
         scale = min(scale_x, scale_y)
         
-        # Offset to center
+        # Offset to center game in game area
         offset_x = (width - board_width * scale) / 2
-        offset_y = (height - board_height * scale) / 2
+        offset_y = (game_height - board_height * scale) / 2
         
         # Draw walls
         wall_thickness = int(5 * scale)
+        game_left = int(offset_x)
+        game_right = int(offset_x + board_width * scale)
+        game_bottom = game_height
+        
         # Left wall
-        img[:, :wall_thickness] = self._wall_color
+        img[:game_height, game_left:game_left+wall_thickness] = self._wall_color
         # Right wall
-        img[:, -wall_thickness:] = self._wall_color
+        img[:game_height, game_right-wall_thickness:game_right] = self._wall_color
         # Bottom wall
-        img[-wall_thickness:, :] = self._wall_color
+        img[game_bottom-wall_thickness:game_bottom, game_left:game_right] = self._wall_color
         
         # Draw lose line
         lose_y = render_data["lose_line_y"]
-        # Convert to image coordinates (flip Y)
-        lose_y_img = int(height - (lose_y * scale + offset_y))
-        if 0 <= lose_y_img < height:
-            # Dashed line effect
-            for x in range(0, width, 10):
-                end_x = min(x + 5, width)
+        lose_y_img = int(game_height - (lose_y * scale + offset_y))
+        if 0 <= lose_y_img < game_height:
+            for x in range(game_left, game_right, 10):
+                end_x = min(x + 5, game_right)
                 img[lose_y_img:lose_y_img+2, x:end_x] = self._lose_line_color
         
         # Draw fruits (sorted by Y so lower fruits are drawn first)
         fruits = sorted(render_data["fruits"], key=lambda f: f["y"])
         
         for fruit in fruits:
-            self._draw_fruit(img, fruit, scale, offset_x, offset_y, height)
+            self._draw_fruit_hitboxes(img, fruit, scale, offset_x, offset_y, game_height)
+        
+        # Draw score
+        score = render_data.get("score", 0)
+        drops = render_data.get("drops_used", 0)
+        self._draw_score(img, score, drops, width)
+        
+        # Draw legend
+        if self._show_legend:
+            self._draw_legend(img, width, height, legend_height)
         
         return img
+    
+    def _draw_fruit_hitboxes(
+        self,
+        img: np.ndarray,
+        fruit: Dict[str, Any],
+        scale: float,
+        offset_x: float,
+        offset_y: float,
+        game_height: int
+    ) -> None:
+        """Draw a fruit using its actual collision circles (hitboxes)."""
+        # Get fruit center and angle
+        world_x = fruit["x"]
+        world_y = fruit["y"]
+        angle = fruit.get("angle", 0.0)
+        
+        # Get color
+        color = np.array(fruit["color_solid"], dtype=np.uint8)
+        outline_color = (color * 0.7).astype(np.uint8)
+        
+        # Get collision circles
+        collision_circles = fruit.get("collision_circles", [])
+        
+        if not collision_circles:
+            # Fallback: use visual radius as single circle
+            cx = int(world_x * scale + offset_x)
+            cy = int(game_height - (world_y * scale + offset_y))
+            radius = int(fruit["visual_radius"] * scale)
+            self._draw_circle(img, cx, cy, radius, color)
+            self._draw_circle_outline(img, cx, cy, radius, outline_color, 2)
+            return
+        
+        # Draw each collision circle, rotated by the fruit's angle
+        cos_a = math.cos(angle)
+        sin_a = math.sin(angle)
+        
+        for circle_data in collision_circles:
+            # circle_data is (radius, offset_x, offset_y)
+            circle_radius, local_ox, local_oy = circle_data
+            
+            # Rotate offset by fruit angle
+            rotated_ox = local_ox * cos_a - local_oy * sin_a
+            rotated_oy = local_ox * sin_a + local_oy * cos_a
+            
+            # Calculate circle center in world coords
+            circle_world_x = world_x + rotated_ox
+            circle_world_y = world_y + rotated_oy
+            
+            # Convert to image coords
+            cx = int(circle_world_x * scale + offset_x)
+            cy = int(game_height - (circle_world_y * scale + offset_y))
+            radius = int(circle_radius * scale)
+            
+            # Draw filled circle
+            self._draw_circle(img, cx, cy, radius, color)
+            # Draw outline
+            self._draw_circle_outline(img, cx, cy, radius, outline_color, 2)
+    
+    def _draw_score(
+        self,
+        img: np.ndarray,
+        score: int,
+        drops: int,
+        width: int
+    ) -> None:
+        """Draw score and drops count at top of image."""
+        if not CV2_AVAILABLE:
+            return
+        
+        # Score text
+        score_text = f"Score: {score}"
+        drops_text = f"Drops: {drops}"
+        
+        # Draw with shadow effect
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.6
+        thickness = 2
+        
+        # Score (top left)
+        cv2.putText(img, score_text, (12, 27), font, font_scale, self._text_shadow, thickness + 1)
+        cv2.putText(img, score_text, (10, 25), font, font_scale, self._text_color, thickness)
+        
+        # Drops (top right)
+        text_size = cv2.getTextSize(drops_text, font, font_scale, thickness)[0]
+        x = width - text_size[0] - 10
+        cv2.putText(img, drops_text, (x + 2, 27), font, font_scale, self._text_shadow, thickness + 1)
+        cv2.putText(img, drops_text, (x, 25), font, font_scale, self._text_color, thickness)
+    
+    def _draw_legend(
+        self,
+        img: np.ndarray,
+        width: int,
+        height: int,
+        legend_height: int
+    ) -> None:
+        """Draw fruit legend at bottom of image."""
+        legend_y = height - legend_height
+        
+        # Dark background for legend
+        img[legend_y:, :] = np.array([20, 20, 25], dtype=np.uint8)
+        
+        # Draw separator line
+        img[legend_y:legend_y+2, :] = np.array([60, 60, 70], dtype=np.uint8)
+        
+        # Calculate layout
+        num_fruits = len(self._fruit_info)
+        # Show only spawnable fruits (0-4) plus some larger ones
+        fruits_to_show = min(8, num_fruits)
+        
+        circle_radius = 8
+        spacing = width // (fruits_to_show + 1)
+        y_center = legend_y + legend_height // 2
+        
+        for i in range(fruits_to_show):
+            fruit = self._fruit_info[i]
+            x_center = spacing * (i + 1)
+            
+            # Draw circle
+            color = np.array(fruit["color"], dtype=np.uint8)
+            self._draw_circle(img, x_center, y_center - 10, circle_radius, color)
+            
+            # Draw name if cv2 available
+            if CV2_AVAILABLE:
+                name = fruit["name"][:6].capitalize()  # Truncate long names
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                font_scale = 0.35
+                text_size = cv2.getTextSize(name, font, font_scale, 1)[0]
+                text_x = x_center - text_size[0] // 2
+                text_y = y_center + 20
+                cv2.putText(img, name, (text_x, text_y), font, font_scale, (180, 180, 180), 1)
     
     def _draw_fruit(
         self,
@@ -111,29 +284,8 @@ class SolidRenderer:
         offset_y: float,
         img_height: int
     ) -> None:
-        """Draw a single fruit as a filled circle."""
-        height, width = img.shape[:2]
-        
-        # Get fruit center in image coords
-        world_x = fruit["x"]
-        world_y = fruit["y"]
-        
-        # Convert to image coordinates (flip Y axis)
-        cx = int(world_x * scale + offset_x)
-        cy = int(img_height - (world_y * scale + offset_y))
-        
-        # Get visual radius scaled
-        radius = int(fruit["visual_radius"] * scale)
-        
-        # Get color
-        color = np.array(fruit["color_solid"], dtype=np.uint8)
-        
-        # Draw filled circle using vectorized numpy
-        self._draw_circle(img, cx, cy, radius, color)
-        
-        # Draw outline (slightly darker)
-        outline_color = (color * 0.7).astype(np.uint8)
-        self._draw_circle_outline(img, cx, cy, radius, outline_color, 2)
+        """Draw a single fruit as a filled circle (legacy method)."""
+        self._draw_fruit_hitboxes(img, fruit, scale, offset_x, offset_y, img_height)
     
     def _draw_circle(
         self,
