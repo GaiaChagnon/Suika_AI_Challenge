@@ -119,7 +119,7 @@ def save_video(seed: int = 42, fps: int = 30) -> Tuple[Dict[str, Any], Path]:
     steps = 0
     while not done:
         action = agent.act(obs)
-        obs, reward, terminated, truncated, info = recorder.step(action)
+        obs, reward, terminated, truncated, info = env.step(action)
         done = terminated or truncated
         steps += 1
         

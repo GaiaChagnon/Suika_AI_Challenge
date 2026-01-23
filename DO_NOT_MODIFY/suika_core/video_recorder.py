@@ -219,18 +219,45 @@ class VideoRecorder:
         # Initialize renderer
         self._init_renderer()
         
-        # Create video writer
-        # Use mp4v codec for broad compatibility
-        fourcc = self._cv2.VideoWriter_fourcc(*'mp4v')
-        self._writer = self._cv2.VideoWriter(
-            str(output_path),
-            fourcc,
-            self.fps,
-            (self.width, self.height)
-        )
+        # Create video writer - try multiple codecs for cross-platform compatibility
+        codecs_to_try = [
+            ('avc1', '.mp4'),   # H.264 - best quality, works on most systems
+            ('mp4v', '.mp4'),   # MPEG-4 - fallback
+            ('XVID', '.avi'),   # XVID - very compatible fallback
+            ('MJPG', '.avi'),   # Motion JPEG - always works
+        ]
         
-        if not self._writer.isOpened():
-            raise RuntimeError(f"Failed to create video writer for {output_path}")
+        self._writer = None
+        actual_path = output_path
+        
+        for codec, ext in codecs_to_try:
+            # Adjust file extension if needed
+            if ext != output_path.suffix:
+                actual_path = output_path.with_suffix(ext)
+            
+            try:
+                fourcc = self._cv2.VideoWriter_fourcc(*codec)
+                writer = self._cv2.VideoWriter(
+                    str(actual_path),
+                    fourcc,
+                    self.fps,
+                    (self.width, self.height)
+                )
+                
+                if writer.isOpened():
+                    self._writer = writer
+                    output_path = actual_path
+                    break
+                else:
+                    writer.release()
+            except Exception:
+                continue
+        
+        if self._writer is None or not self._writer.isOpened():
+            raise RuntimeError(
+                f"Failed to create video writer. Tried codecs: {[c[0] for c in codecs_to_try]}\n"
+                f"Make sure opencv-python is installed: pip install opencv-python"
+            )
         
         self._output_path = output_path
         self._recording = True
