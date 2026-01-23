@@ -262,12 +262,24 @@ def view_replay(
         last_score = scores[-1] if scores else 0
         scores = scores + [last_score] * (len(actions) - len(scores))
     
-    # Check config hash for compatibility
+    # Check config hash for compatibility (must match _compute_config_hash in replay_recorder.py)
     config = load_config()
-    current_hash = hashlib.md5(json.dumps({
-        "board": {"width": config.board.width, "height": config.board.height},
-        "fruits": [{"id": f.id, "visual_radius": f.visual_radius} for f in config.fruits],
-    }, sort_keys=True).encode()).hexdigest()[:8]
+    hash_data = {
+        "board": {
+            "width": config.board.width,
+            "height": config.board.height,
+            "lose_line_y": config.board.lose_line_y,
+        },
+        "fruits": [
+            {
+                "id": f.id,
+                "visual_radius": f.visual_radius,
+                "mass": f.mass,
+            }
+            for f in config.fruits
+        ],
+    }
+    current_hash = hashlib.md5(json.dumps(hash_data, sort_keys=True).encode()).hexdigest()[:8]
     
     replay_hash = replay.get("config_hash", "unknown")
     config_mismatch = replay_hash != "unknown" and replay_hash != current_hash
