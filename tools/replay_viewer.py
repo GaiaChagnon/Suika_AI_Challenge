@@ -275,21 +275,26 @@ def view_replay(
     print(f"Replay: {replay_path}")
     print(f"Seed: {seed}")
     print(f"Agent: {agent_name}")
-    print(f"Actions: {len(actions)}")
-    print(f"Final score: {final_score}")
-    print(f"Game ended: {termination_reason}")
+    print(f"Recorded actions: {len(actions)}")
+    print(f"Recorded final score: {final_score}")
+    print(f"Recorded termination: {termination_reason}")
     
     if config_mismatch:
         print()
-        print("WARNING: Replay was recorded with different game config!")
+        print("=" * 60)
+        print("WARNING: Replay was recorded with DIFFERENT game config!")
+        print("=" * 60)
         print(f"  Replay config hash: {replay_hash}")
         print(f"  Current config hash: {current_hash}")
-        print("  Visual playback may not match recorded scores.")
+        print()
+        print("  The visual playback will simulate with CURRENT config,")
+        print("  which may cause the game to end at a different point")
+        print("  than the recording. Watch for 'EARLY END' in the viewer.")
+        print("=" * 60)
     
     print()
-    print("NOTE: Physics replays may show slight variations due to")
-    print("      floating-point non-determinism. Scores shown are from")
-    print("      the original recording.")
+    print("NOTE: If game config changed since recording, visual playback")
+    print("      may diverge from recorded data (different physics/rules).")
     print()
     print("Controls:")
     print("  SPACE       Play/Pause")
@@ -411,6 +416,9 @@ def view_replay(
                 action_idx += 1
                 last_step_time = current_time
         
+        # Track if game ended before all recorded actions were played
+        early_termination = game.is_over and action_idx < len(actions)
+        
         # Clear screen
         screen.fill((20, 20, 25))
         
@@ -426,10 +434,17 @@ def view_replay(
         # Status text - show termination reason when at end
         at_end = action_idx >= len(actions) or game.is_over
         if at_end:
-            # Format termination reason for display
-            reason_display = termination_reason.replace("_", " ").title() if termination_reason else "Unknown"
-            status = f"GAME OVER: {reason_display}"
-            status_color = (255, 100, 100)
+            if early_termination:
+                # Game ended before all recorded actions - config mismatch likely
+                actual_reason = game.termination_reason if game.termination_reason else "unknown"
+                actual_reason_display = actual_reason.replace("_", " ").title()
+                status = f"EARLY END: {actual_reason_display} @ {action_idx}/{len(actions)}"
+                status_color = (255, 150, 50)  # Orange to indicate mismatch
+            else:
+                # Format termination reason for display
+                reason_display = termination_reason.replace("_", " ").title() if termination_reason else "Unknown"
+                status = f"GAME OVER: {reason_display}"
+                status_color = (255, 100, 100)
         elif paused:
             status = "PAUSED"
             status_color = (255, 200, 100)
@@ -445,10 +460,19 @@ def view_replay(
             speed_text = font.render(f"Speed: {playback_speed:.1f}x", True, (150, 150, 150))
             screen.blit(speed_text, (window_width - speed_text.get_width() - timeline_margin, status_y))
         
-        # Score display
-        current_score = scores[min(action_idx, len(scores) - 1)] if scores else 0
-        score_text = font_large.render(f"Score: {current_score}", True, (255, 255, 255))
-        screen.blit(score_text, (window_width - score_text.get_width() - timeline_margin, status_y + 25))
+        # Score display - show actual game score vs recorded score when they differ
+        recorded_score = scores[min(action_idx, len(scores) - 1)] if scores else 0
+        actual_score = game.score
+        
+        if early_termination or actual_score != recorded_score:
+            # Show both actual and recorded scores when they differ
+            score_text = font_large.render(f"Score: {actual_score}", True, (255, 255, 255))
+            screen.blit(score_text, (window_width - score_text.get_width() - timeline_margin, status_y + 20))
+            recorded_text = font.render(f"(Recorded: {recorded_score})", True, (150, 150, 150))
+            screen.blit(recorded_text, (window_width - recorded_text.get_width() - timeline_margin, status_y + 45))
+        else:
+            score_text = font_large.render(f"Score: {actual_score}", True, (255, 255, 255))
+            screen.blit(score_text, (window_width - score_text.get_width() - timeline_margin, status_y + 25))
         
         # Render timeline
         timeline.render(screen, font, action_idx)

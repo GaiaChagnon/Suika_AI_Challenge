@@ -10,8 +10,8 @@
 # -----------------------------------------------------------------------------
 board:
   # Arena: 400 x 500 (4:5 aspect ratio)
-  width: 400               # Arena width
-  height: 500              # Arena height
+  width: 440               # Arena width
+  height: 550              # Arena height
   
   # Lose line: fruits above this for >3s = game over
   lose_line_y: 475         # 95% of arena height
