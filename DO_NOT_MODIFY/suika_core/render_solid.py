@@ -239,7 +239,7 @@ class SolidRenderer:
         height: int,
         legend_height: int
     ) -> None:
-        """Draw fruit legend at bottom of image."""
+        """Draw fruit legend at bottom of image showing ALL fruit types."""
         legend_y = height - legend_height
         
         # Dark background for legend
@@ -248,32 +248,31 @@ class SolidRenderer:
         # Draw separator line
         img[legend_y:legend_y+2, :] = np.array([60, 60, 70], dtype=np.uint8)
         
-        # Calculate layout
+        # Show ALL fruits
         num_fruits = len(self._fruit_info)
-        # Show only spawnable fruits (0-4) plus some larger ones
-        fruits_to_show = min(8, num_fruits)
         
-        circle_radius = 8
-        spacing = width // (fruits_to_show + 1)
+        # Adjust circle size based on number of fruits
+        circle_radius = max(5, min(10, (width - 20) // (num_fruits * 3)))
+        spacing = width // (num_fruits + 1)
         y_center = legend_y + legend_height // 2
         
-        for i in range(fruits_to_show):
-            fruit = self._fruit_info[i]
+        for i, fruit in enumerate(self._fruit_info):
             x_center = spacing * (i + 1)
             
             # Draw circle
             color = np.array(fruit["color"], dtype=np.uint8)
-            self._draw_circle(img, x_center, y_center - 10, circle_radius, color)
+            self._draw_circle(img, x_center, y_center - 8, circle_radius, color)
             
             # Draw name if cv2 available
             if CV2_AVAILABLE:
-                name = fruit["name"][:6].capitalize()  # Truncate long names
+                # Use first 4 chars for compactness
+                name = fruit["name"][:4].capitalize()
                 font = cv2.FONT_HERSHEY_SIMPLEX
-                font_scale = 0.35
+                font_scale = 0.3
                 text_size = cv2.getTextSize(name, font, font_scale, 1)[0]
                 text_x = x_center - text_size[0] // 2
-                text_y = y_center + 20
-                cv2.putText(img, name, (text_x, text_y), font, font_scale, (180, 180, 180), 1)
+                text_y = y_center + 18
+                cv2.putText(img, name, (text_x, text_y), font, font_scale, (150, 150, 150), 1)
     
     def _draw_fruit(
         self,

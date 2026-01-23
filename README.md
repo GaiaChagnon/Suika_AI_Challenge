@@ -158,7 +158,10 @@ suika_competition/
 │   ├── play_human.py           # Interactive play
 │   ├── view_grid.py            # Multi-env viewer
 │   ├── benchmark_speed.py      # Performance testing
-│   └── replay_viewer.py        # Replay analysis
+│   └── replay_viewer.py        # Replay analysis (legacy)
+│
+│   # Video recording (recommended)
+│   # Videos capture actual rendered frames - deterministic playback
 │
 ├── assets/sprites/             # Game graphics
 └── tests/                      # Test suite
@@ -361,6 +364,38 @@ Options:
   --steps S        Steps to run (default: 1000)
   --warmup W       Warmup steps (default: 100)
 ```
+
+### Video Recording
+
+Record gameplay to MP4 video files. Videos capture actual rendered frames, so playback is **deterministic** regardless of domain randomization.
+
+```python
+from DO_NOT_MODIFY.suika_core import SuikaEnv, VideoRecorder
+
+env = SuikaEnv()
+recorder = VideoRecorder(fps=30, width=440, height=550)
+
+obs, info = env.reset(seed=42)
+recorder.start(env_or_game=env, agent_name="my_agent", seed=42, directory="videos/")
+recorder.capture_frame(env)
+
+done = False
+while not done:
+    action = my_agent(obs)
+    obs, reward, terminated, truncated, info = env.step(action)
+    recorder.capture_frame(env)
+    done = terminated or truncated
+
+recorder.stop()  # Saves MP4 file
+```
+
+**Video features:**
+- Score and drops display at top
+- Actual collision hitboxes rendered (not visual radius)
+- Fruit color legend showing all 12 fruit types
+- Works in headless environments (Docker, Isaac Gym) with `SDL_VIDEODRIVER=dummy`
+
+**Requirements:** `pip install opencv-python`
 
 ### Evaluation
 ```bash
