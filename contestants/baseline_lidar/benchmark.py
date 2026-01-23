@@ -52,8 +52,8 @@ from DO_NOT_MODIFY.suika_core import SuikaEnv
 from DO_NOT_MODIFY.suika_core.async_vector_env import make_async_vec_env, get_recommended_num_envs
 
 
-# Replays directory (auto-created)
-REPLAYS_DIR = Path(__file__).parent / "replays"
+# Videos directory (auto-created)
+VIDEOS_DIR = Path(__file__).parent / "videos"
 
 
 @dataclass
@@ -78,42 +78,65 @@ class BenchmarkResults:
     peak_memory_mb: float = 0.0
 
 
-def save_replay(seed: int = 42) -> Tuple[Dict[str, Any], Path]:
+def save_video(seed: int = 42, fps: int = 30) -> Tuple[Dict[str, Any], Path]:
     """
-    Play one episode and save it as a replay with auto-generated timestamp name.
+    Play one episode and save it as an MP4 video.
     
-    Uses the ReplayRecorder wrapper for easy recording.
-    Saves to the replays/ subdirectory with format: baseline_lidar_{timestamp}_s{seed}.json
+    Records actual rendered frames - deterministic regardless of domain randomization.
+    Saves to the videos/ subdirectory with format: baseline_lidar_{timestamp}_s{seed}.mp4
     
     Args:
         seed: Random seed for the episode.
+        fps: Frames per second for the video.
         
     Returns:
-        Tuple of (replay_data, saved_path).
+        Tuple of (episode_info, saved_path).
     """
-    from DO_NOT_MODIFY.suika_core.replay_recorder import ReplayRecorder
+    from DO_NOT_MODIFY.suika_core.video_recorder import VideoRecorder
     
-    # Ensure replays directory exists
-    REPLAYS_DIR.mkdir(exist_ok=True)
+    # Ensure videos directory exists
+    VIDEOS_DIR.mkdir(exist_ok=True)
     
     env = SuikaEnv()
-    recorder = ReplayRecorder(env, agent_name="baseline_lidar")
+    recorder = VideoRecorder(fps=fps, width=440, height=550)
     agent = SuikaAgent()
     
-    obs, info = recorder.reset(seed=seed)
+    obs, info = env.reset(seed=seed)
     agent.reset(seed=seed)
     
+    # Start recording
+    saved_path = recorder.start(
+        env_or_game=env,
+        agent_name="baseline_lidar",
+        seed=seed,
+        directory=VIDEOS_DIR
+    )
+    
+    # Capture initial frame
+    recorder.capture_frame(env)
+    
     done = False
+    steps = 0
     while not done:
         action = agent.act(obs)
         obs, reward, terminated, truncated, info = recorder.step(action)
         done = terminated or truncated
+        steps += 1
+        
+        # Capture frame after each step
+        recorder.capture_frame(env)
     
-    # Save with auto-generated timestamp name in replays directory
-    saved_path = recorder.save(directory=REPLAYS_DIR)
-    
+    recorder.stop()
     env.close()
-    return recorder.get_replay_data(), saved_path
+    
+    episode_info = {
+        "seed": seed,
+        "final_score": info.get("score", 0),
+        "drops": steps,
+        "terminated_reason": info.get("terminated_reason", "unknown"),
+    }
+    
+    return episode_info, saved_path
 
 
 def run_single_benchmark(
@@ -308,15 +331,16 @@ def run_benchmark(
     results.avg_steps_per_second = np.mean(all_steps_per_sec)
     results.peak_memory_mb = max((m.memory_peak_mb for m in results.run_metrics), default=0)
     
-    # Save replay of one episode AFTER benchmark completes
+    # Save video of one episode AFTER benchmark completes
     if save_replay_flag:
-        print("Saving replay episode...")
-        replay, replay_path = save_replay(seed=seed)
-        print(f"  Replay score: {replay['final_score']}")
-        print(f"  Replay drops: {len(replay['actions'])}")
+        print("Recording video episode...")
+        episode_info, video_path = save_video(seed=seed)
+        print(f"  Episode score: {episode_info['final_score']}")
+        print(f"  Episode drops: {episode_info['drops']}")
+        print(f"  Termination: {episode_info['terminated_reason']}")
         print()
-        print("  To view replay, run:")
-        print(f"    python tools/replay_viewer.py {replay_path}")
+        print("  To view video, open:")
+        print(f"    {video_path}")
         print()
     
     return results
@@ -367,7 +391,7 @@ def print_results(results: BenchmarkResults) -> None:
     print(f"  Best Score: {score_stats['max']:.0f}")
     print(f"  Worst Score: {score_stats['min']:.0f}")
     print()
-    print(f"  Replays saved to: {REPLAYS_DIR}/")
+    print(f"  Videos saved to: {VIDEOS_DIR}/")
     print()
     print("  Use this baseline to compare your agent's performance!")
     print("=" * 70)
@@ -391,8 +415,8 @@ Performance Notes:
   - Default num-envs = CPU cores ({default_envs} on this machine)
   - Don't use more envs than CPU cores (causes context-switching overhead)
   
-To view saved replays:
-  python tools/replay_viewer.py contestants/baseline_lidar/replays/<filename>.json
+Videos are saved to:
+  contestants/baseline_lidar/videos/<filename>.mp4
         """
     )
     parser.add_argument(
@@ -412,8 +436,8 @@ To view saved replays:
         help="Print per-episode details"
     )
     parser.add_argument(
-        "--no-replay", action="store_true",
-        help="Don't save a replay"
+        "--no-video", action="store_true",
+        help="Don't record a video"
     )
     parser.add_argument(
         "--sync", action="store_true",
@@ -427,7 +451,7 @@ To view saved replays:
         num_runs=args.num_runs,
         seed=args.seed,
         verbose=args.verbose,
-        save_replay_flag=not args.no_replay,
+        save_replay_flag=not args.no_video,
         use_sync=args.sync
     )
     

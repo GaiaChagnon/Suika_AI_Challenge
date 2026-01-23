@@ -10,6 +10,7 @@ Main exports:
 - make_async_vec_env: Create truly parallel environments (multiprocessing)
 - CoreGame: Low-level game simulation (used internally)
 - GameConfig: Configuration loaded from game_config.yaml
+- VideoRecorder: Record gameplay to MP4 video (deterministic capture)
 """
 
 from DO_NOT_MODIFY.suika_core.config_loader import GameConfig, load_config
@@ -27,6 +28,11 @@ from DO_NOT_MODIFY.suika_core.replay_recorder import (
     record_episode,
     generate_replay_filename,
 )
+from DO_NOT_MODIFY.suika_core.video_recorder import (
+    VideoRecorder,
+    record_episode_video,
+    generate_video_filename,
+)
 
 __all__ = [
     "GameConfig",
@@ -42,4 +48,7 @@ __all__ = [
     "ReplayRecorder",
     "record_episode",
     "generate_replay_filename",
+    "VideoRecorder",
+    "record_episode_video",
+    "generate_video_filename",
 ]

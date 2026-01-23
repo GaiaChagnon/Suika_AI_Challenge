@@ -18,7 +18,7 @@ board:
   lose_line_grace_time: 3.0  # Seconds before game over triggers
   
   # Spawn position
-  spawn_y: 485             # Y coordinate where fruits spawn
+  spawn_y: 500             # Y coordinate where fruits spawn
   spawn_margin: 3          # Extra margin from walls (pixels)
 
 # -----------------------------------------------------------------------------

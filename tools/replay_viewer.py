@@ -201,27 +201,6 @@ class Timeline:
 # -----------------------------------------------------------------------------
 # Replay Viewer
 # -----------------------------------------------------------------------------
-def _disable_domain_randomization(game: CoreGame, config) -> None:
-    """
-    Reset domain randomization factors to defaults for deterministic replay.
-    
-    Domain randomization adds slight variations to physics parameters,
-    which can cause replays to diverge over many steps. Disabling it
-    ensures more consistent playback.
-    """
-    physics = game._physics
-    physics._friction_factor = 1.0
-    physics._elasticity_factor = 1.0
-    physics._mass_factors = {}
-    physics._gravity_factor = 1.0
-    # Restore default gravity (undo any randomization)
-    physics._space.gravity = config.physics.gravity
-    # Reset wall friction/elasticity to defaults
-    for wall in physics._wall_shapes:
-        wall.friction = config.physics.default_friction
-        wall.elasticity = config.physics.default_elasticity
-
-
 def rebuild_game_to_step(
     config,
     seed: int,
@@ -233,7 +212,6 @@ def rebuild_game_to_step(
     """
     game = CoreGame(config=config, seed=seed)
     game.reset(seed=seed)
-    _disable_domain_randomization(game, config)
     
     for i in range(min(target_step, len(actions))):
         if game.is_over:
@@ -291,28 +269,12 @@ def view_replay(
             "width": config.board.width,
             "height": config.board.height,
             "lose_line_y": config.board.lose_line_y,
-            "spawn_y": config.board.spawn_y,
-        },
-        "physics": {
-            "gravity": config.physics.gravity,
-            "damping": config.physics.damping,
-            "dt": config.physics.dt,
-            "default_friction": config.physics.default_friction,
-            "default_elasticity": config.physics.default_elasticity,
-        },
-        "caps": {
-            "out_of_bounds_distance": config.caps.out_of_bounds_distance,
-        },
-        "domain_randomization": {
-            "enabled": config.domain_randomization.enabled,
         },
         "fruits": [
             {
                 "id": f.id,
                 "visual_radius": f.visual_radius,
                 "mass": f.mass,
-                "friction": f.friction,
-                "elasticity": f.elasticity,
             }
             for f in config.fruits
         ],
@@ -343,9 +305,8 @@ def view_replay(
         print("=" * 60)
     
     print()
-    print("NOTE: Physics simulations may diverge from recorded data due to")
-    print("      floating-point non-determinism. Domain randomization is")
-    print("      disabled during replay to minimize divergence.")
+    print("NOTE: If game config changed since recording, visual playback")
+    print("      may diverge from recorded data (different physics/rules).")
     print()
     print("Controls:")
     print("  SPACE       Play/Pause")
@@ -358,11 +319,9 @@ def view_replay(
     print()
     
     # Create game and renderer
-    # Disable domain randomization for deterministic replay
     config = load_config()
     game = CoreGame(config=config, seed=seed)
     game.reset(seed=seed)
-    _disable_domain_randomization(game, config)
     renderer = PygameRenderer(config)
     
     # Initialize pygame
