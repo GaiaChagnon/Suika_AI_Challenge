@@ -75,18 +75,34 @@ def generate_replay_filename(
 def _compute_config_hash() -> str:
     """Compute a hash of the game config for replay validation."""
     config = load_config()
-    # Hash key parameters that affect gameplay
+    # Hash all parameters that affect gameplay/physics
     hash_data = {
         "board": {
             "width": config.board.width,
             "height": config.board.height,
             "lose_line_y": config.board.lose_line_y,
+            "spawn_y": config.board.spawn_y,
+        },
+        "physics": {
+            "gravity": config.physics.gravity,
+            "damping": config.physics.damping,
+            "dt": config.physics.dt,
+            "default_friction": config.physics.default_friction,
+            "default_elasticity": config.physics.default_elasticity,
+        },
+        "caps": {
+            "out_of_bounds_distance": config.caps.out_of_bounds_distance,
+        },
+        "domain_randomization": {
+            "enabled": config.domain_randomization.enabled,
         },
         "fruits": [
             {
                 "id": f.id,
                 "visual_radius": f.visual_radius,
                 "mass": f.mass,
+                "friction": f.friction,
+                "elasticity": f.elasticity,
             }
             for f in config.fruits
         ],
